@@ -113,7 +113,7 @@ The CIRCLE viewing view plus history. Both views stay in static seating order.
 - [x] Non-blocking `aria-live` callouts: Assaf, 100-halving, elimination, mid-game join — `src/screens/Callouts.tsx`
 - [ ] Round-by-round history log (caller, hands, outcome, points) — including join events — *deferred: not in this build; the per-round log is a read-only detail panel, lower priority than the core loop. Flag for a follow-up phase.*
 - [x] Undo last round — states what it reverts, full recompute; plus a caught-and-shown recovery when an edit/undo strands a mid-game join (engine error never crashes)
-- [ ] **In-app Help / How-to screen** — reachable any time from a "?" / Help control (Play + Setup screens); renders the shared how-to guide (no install steps) plus a "share this app" link. Content is the single shared block in `docs/landing-and-help-content.md` (Section C) — author once, reuse on the landing page. *Small UI screen; can land alongside the UI phases.*
+- [ ] **In-app Help screen** — reachable any time from a **"?" / Help** control on the **Play and Setup** screens; opens a Help screen with **two clearly-labelled tabs/sections: "How to Use" (operating the app) and "How to Play" (the rules of Yaniv, from the rules file)**, plus a **"share this app"** link. No install steps. Content is the two single-source blocks in `docs/landing-and-help-content.md` — **Section A (How to Use)** and **Section B (How to Play)** — authored once and reused on the landing page. *Small UI screen; can land alongside the UI phases.*
 
 ---
 
@@ -133,10 +133,10 @@ The CIRCLE viewing view plus history. Both views stay in static seating order.
 
 ### Phase 10a — Landing / install page (pairs with the PWA install entry point)
 The public page on the same static URL the app is distributed from. It's where each device gets its own copy, so it lands with the PWA/install work.
-- [ ] **Landing page** at the app URL: hero + one-line summary, "Why install?" (offline, full-screen, no app store), and the full how-to guide. Content is in `docs/landing-and-help-content.md` (Part 1 + the shared Section C).
+- [ ] **Landing page** at the app URL: hero + one-line summary, "Why install?" (offline, full-screen, no app store), and **both** guides — **How to Use** and **How to Play**. Content is in `docs/landing-and-help-content.md` (Part 1 + the shared Sections A and B).
 - [ ] **Install on Android** steps (open in Chrome → install / Add to Home screen prompt or ⋮ menu).
 - [ ] **Install on iPhone / iPad** steps — call out the gotcha: must use **Safari** (Chrome/other browsers can't install a PWA on iOS) → Share button → Add to Home Screen.
-- [ ] Reuse the **same how-to block** as the in-app Help screen (single source — Section C of the content doc); don't write the rules twice.
+- [ ] Reuse the **same two how-to blocks** as the in-app Help screen (single source — Sections A and B of the content doc); don't write the app guide or the rules twice.
 
 ---
 
@@ -166,7 +166,7 @@ Depends on Phase 10 + Phase 12.
 ---
 
 ## Current Focus
-**Phases 0–9 complete (Turing).** Engine + state + persistence (0–3), mid-game join engine (4), and the full themed two-view UI (5–9) are built against the approved design in `docs/ui-direction.md`. Real screens now exist under `src/screens/` (Setup, RoundEntry + NumberPad, PlayScreen with circle/big-board views + Callouts + BigBoard, EndGame + Confetti) on a tokenized two-theme layer under `src/theme/` (Felt & Chips / Party Arcade, persisted per-device toggle). The placeholder stubs are gone. Full suite green: **257 tests** (241 prior + 16 new component/interaction tests), clean `tsc -b` + production `vite build`.
+**Phases 0–9 complete (Turing).** Engine + state + persistence (0–3), mid-game join engine (4), and the full themed two-view UI (5–9) are built against the approved design in `docs/ui-direction.md`. Real screens now exist under `src/screens/` (Setup, RoundEntry + NumberPad, PlayScreen with circle/big-board views + Callouts + BigBoard, EndGame + Confetti) on a tokenized two-theme layer under `src/theme/` (Felt & Chips / Party Arcade, persisted per-device toggle). The placeholder stubs are gone. **Full test suite passing** (~300 tests across engine, state, persistence, and component/interaction coverage), clean `tsc -b` + production `vite build`.
 
 **Store contract extension (flagged):** the store now exposes `addPlayer(name)` (mid-game join — builds the Player with a name-independent id, next seat, and join marker) and `removePlayer(id)` (recovers from an edit/undo that strands a joiner). Also added a derived `engineError` so a recompute throw surfaces a plain message instead of a blank screen. Engine and persistence layers were NOT modified (one unused import removed from an engine *test* file — a pre-existing clean-build blocker, no logic change).
 
