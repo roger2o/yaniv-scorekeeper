@@ -1,0 +1,61 @@
+.callouts {
+  position: fixed;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: calc(100% - 32px);
+  max-width: 448px;
+  pointer-events: none;
+}
+
+.callout {
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: center;
+  box-shadow: var(--shadow);
+  animation: callout-in var(--dur-base) var(--ease-out);
+}
+
+.callout[data-tone='assaf'] {
+  background: var(--danger);
+  color: var(--danger-ink);
+}
+
+.callout[data-tone='halve'] {
+  background: var(--celebrate);
+  color: var(--chip-text);
+}
+
+.callout[data-tone='out'] {
+  background: var(--surface-raised);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+}
+
+.callout[data-tone='join'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+@keyframes callout-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .callout {
+    animation: none;
+  }
+}

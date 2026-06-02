@@ -1,0 +1,188 @@
+.setup__heading {
+  font-size: 1.6rem;
+  margin: 8px 0 4px;
+  color: var(--ink);
+}
+
+.setup__group {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.setup__players {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setup__player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.setup__seat-badge {
+  font-size: 1.2rem;
+  width: 24px;
+  text-align: center;
+  flex: none;
+}
+
+.setup__name-input {
+  flex: 1;
+  min-height: 52px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--chip-text);
+  background: var(--chip);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color var(--dur-base) var(--ease-out);
+}
+
+.setup__name-input::placeholder {
+  color: var(--chip-muted);
+}
+
+.setup__name-input:focus-visible {
+  border-color: var(--accent);
+}
+
+.setup__remove {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+}
+
+.setup__add {
+  align-self: flex-start;
+  min-height: 48px;
+  font-size: 0.95rem;
+}
+
+/* --- Segmented control (threshold) --------------------------------------- */
+.segmented {
+  display: flex;
+  gap: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+}
+
+.segmented__option {
+  flex: 1;
+  min-height: 52px;
+  border-radius: calc(var(--radius) - 4px);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--ink);
+  background: transparent;
+  transition: background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out), transform var(--dur-press) var(--ease-out);
+}
+
+.segmented__option[data-selected='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* --- Toggle switch ------------------------------------------------------- */
+.setup__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.setup__toggle-label {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.switch {
+  position: relative;
+  width: 60px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  border: 1px solid var(--border);
+  transition: background-color var(--dur-base) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.switch[data-on='true'] {
+  background: var(--accent);
+}
+
+.switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--chip);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+
+.switch[data-on='true'] .switch__knob {
+  transform: translateX(26px);
+}
+
+/* --- Advanced disclosure ------------------------------------------------- */
+.setup__advanced {
+  margin: 8px 0 4px;
+}
+
+.setup__disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.setup__advanced-body {
+  margin-top: 8px;
+}
+
+.setup__knockout-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.setup__knockout-field .setup__name-input {
+  flex: none;
+  max-width: 140px;
+}
+
+.setup__start {
+  margin-top: 20px;
+}
+
+.setup__hint {
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  margin: 8px 0 0;
+}

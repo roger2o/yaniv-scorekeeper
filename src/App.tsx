@@ -15,17 +15,20 @@
  */
 
 import { StoreProvider, useStore } from './state';
+import { ThemeProvider } from './theme';
 import { SetupScreen } from './screens/SetupScreen';
 import { PlayScreen } from './screens/PlayScreen';
 import { EndGameScreen } from './screens/EndGameScreen';
 
 function StorageWarningBanner() {
   const { storageWarning } = useStore();
-  if (storageWarning === null) return null;
+  // The 'corrupt-discarded' case (a previous game couldn't be restored) is
+  // surfaced inline on the Setup screen instead, so don't double-announce it.
+  if (storageWarning === null || storageWarning.kind === 'corrupt-discarded') return null;
   return (
-    <div role="status" data-testid="storage-warning">
+    <div className="banner" role="status" data-testid="storage-warning">
       Heads up: this game can’t be saved on this device, so a refresh or close
-      may lose it. You can still play normally. ({storageWarning.message})
+      may lose it. You can still play normally.
     </div>
   );
 }
@@ -55,8 +58,10 @@ function Shell() {
 
 export function App() {
   return (
-    <StoreProvider>
-      <Shell />
-    </StoreProvider>
+    <ThemeProvider>
+      <StoreProvider>
+        <Shell />
+      </StoreProvider>
+    </ThemeProvider>
   );
 }
