@@ -61,7 +61,7 @@ function validateSettings(settings: GameSettings): void {
   }
   // [INVARIANT] Seats must be exactly {0, 1, …, players.length-1} — contiguous
   // and 0-based, in the order players were added. This guarantees the seat
-  // circle has no gaps, so clockwise tie-break and next-dealer logic are sound.
+  // circle has no gaps, so clockwise tie-break and who-starts-next logic are sound.
   for (let i = 0; i < players.length; i++) {
     if (!seats.has(i)) {
       throw new EngineInputError(
