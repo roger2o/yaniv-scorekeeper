@@ -32,6 +32,19 @@ import type { AppState, GameStateSlice, StorageWarning } from './types';
 export interface StoreActions {
   startGame: (settings: GameSettings) => void;
   addRound: (round: RoundEntry) => void;
+  /**
+   * Mid-game join: add a player by name to the in-progress game. The store
+   * builds the Player — a stable id INDEPENDENT of the name (so duplicate names
+   * can never collide), the next free seat, and a join marker so the engine
+   * seeds them at recompute time (highest active cumulative, no head start).
+   */
+  addPlayer: (name: string) => void;
+  /**
+   * Remove a mid-game joiner by id. Used to RECOVER when an edit/undo strands a
+   * latecomer's join and the engine rejects the game (brief item 8). No-op on an
+   * original player.
+   */
+  removePlayer: (playerId: string) => void;
   /** Undo the most recent round only (locked: most-recent-only). */
   undoLastRound: () => void;
   /** Edit the most recent round only (locked: most-recent-only). */
@@ -49,6 +62,16 @@ export interface StoreValue extends StoreActions {
    * started (no settings yet). This is the ONLY place derived state lives.
    */
   game: GameState | null;
+  /**
+   * Plain-language message when the CURRENT source-of-truth makes the engine
+   * throw (so `game` is null mid-game). The expected real-world trigger is the
+   * edit/undo-invalidates-a-join case: editing the last round can shorten or
+   * reshape history so a recorded join no longer has a round to take effect in,
+   * and the engine rejects it ("Cannot join a game that has already ended").
+   * The UI shows this instead of a blank screen, and offers undo. Null when the
+   * engine is happy (or before a game exists).
+   */
+  engineError: string | null;
   /** Non-fatal storage warning (null when healthy). */
   storageWarning: StorageWarning;
 }
@@ -155,9 +178,35 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slice]);
 
+  // The engine derives a joiner's seat circle from `settings.players`, so a
+  // mid-game join is "add a Player". We need the current player count to pick
+  // the next free seat and the current history length for the join marker. Read
+  // them off a ref kept in sync so the action identity stays stable.
+  const settingsRef = useRef(state.settings);
+  settingsRef.current = state.settings;
+  const historyLenRef = useRef(state.history.length);
+  historyLenRef.current = state.history.length;
+
   const actions: StoreActions = useMemo(
     () => ({
       startGame: (settings) => dispatch({ type: 'START_GAME', settings }),
+      addPlayer: (name) => {
+        const current = settingsRef.current;
+        if (current === null) return;
+        const player = {
+          // Stable id INDEPENDENT of the name (counter over existing seats +
+          // a random suffix) so duplicate names can never collide.
+          id: `p${current.players.length}-${Math.random().toString(36).slice(2, 8)}`,
+          name: name.trim() === '' ? `Player ${current.players.length + 1}` : name.trim(),
+          // Next free seat: seats are the contiguous set {0..n-1}, so the next
+          // seat is exactly the current player count.
+          seat: current.players.length,
+          // Joins take effect just before the next round to be played.
+          joinsBeforeRoundIndex: historyLenRef.current,
+        };
+        dispatch({ type: 'ADD_PLAYER', player });
+      },
+      removePlayer: (playerId) => dispatch({ type: 'REMOVE_PLAYER', playerId }),
       addRound: (round) => dispatch({ type: 'ADD_ROUND', round }),
       undoLastRound: () => dispatch({ type: 'UNDO_LAST_ROUND' }),
       editLastRound: (round) => dispatch({ type: 'EDIT_LAST_ROUND', round }),
@@ -175,21 +224,26 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
   // Derived game state: the ONLY source of standings/totals/callouts/winner.
   // Fix #1 ensures only engine-valid state is ever ADMITTED on restore, so this
   // selector should never see invalid input from the load path. As a render-time
-  // safety net it is still wrapped: a `recompute` throw here (e.g. a live action
-  // somehow producing engine-illegal history) must NEVER white-screen the shell.
-  // We return null on throw — the shell treats "no derived game" gracefully.
-  const game: GameState | null = useMemo(() => {
-    if (state.settings === null) return null;
+  // safety net it is still wrapped: a `recompute` throw here (e.g. an edit that
+  // invalidates a recorded mid-game join) must NEVER white-screen the shell.
+  // On throw we return null AND surface the engine's message so the UI can show
+  // a plain explanation and offer undo — instead of a silent blank screen.
+  const { game, engineError } = useMemo<{
+    game: GameState | null;
+    engineError: string | null;
+  }>(() => {
+    if (state.settings === null) return { game: null, engineError: null };
     try {
-      return recompute(state.history, state.settings);
-    } catch {
-      return null;
+      return { game: recompute(state.history, state.settings), engineError: null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'The game could not be recalculated.';
+      return { game: null, engineError: message };
     }
   }, [state.history, state.settings]);
 
   const value: StoreValue = useMemo(
-    () => ({ state, game, storageWarning: state.storageWarning, ...actions }),
-    [state, game, actions],
+    () => ({ state, game, engineError, storageWarning: state.storageWarning, ...actions }),
+    [state, game, engineError, actions],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

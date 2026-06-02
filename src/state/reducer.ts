@@ -13,12 +13,28 @@
  *  - History is the single source of truth; we never patch totals in place.
  */
 
-import type { GameSettings, RoundEntry } from '../engine';
+import type { GameSettings, Player, RoundEntry } from '../engine';
 import type { AppState, StorageWarning } from './types';
 
 export type Action =
   /** Begin a fresh game with the given settings; clears any prior history. */
   | { type: 'START_GAME'; settings: GameSettings }
+  /**
+   * Mid-game join: add a player to the in-progress game. The caller supplies a
+   * fully-formed Player (stable id, the next free seat, and a
+   * `joinsBeforeRoundIndex` marking the join point). The engine derives the
+   * joiner's seed at recompute time. No history change — the join lives in
+   * `settings.players`, which is still the engine's input alongside history.
+   */
+  | { type: 'ADD_PLAYER'; player: Player }
+  /**
+   * Remove a player by id. Used to RECOVER from an edit/undo that strands a
+   * mid-game joiner (the engine then rejects the game): removing the stranded
+   * latecomer makes the game legal again. Only meaningful for a mid-game joiner;
+   * removing an original player is guarded against (would break seat contiguity
+   * and history). No-op if it would drop below the seat-0/1 originals.
+   */
+  | { type: 'REMOVE_PLAYER'; playerId: string }
   /** Append a round to history (engine then re-derives everything). */
   | { type: 'ADD_ROUND'; round: RoundEntry }
   /** Drop the most recent round (undo). No-op if history is empty. */
@@ -49,6 +65,37 @@ export function reducer(state: AppState, action: Action): AppState {
         history: [],
         screen: 'play',
       };
+
+    case 'ADD_PLAYER':
+      // Guard: only meaningful once a game exists. The reducer does NOT validate
+      // the join (seat, id uniqueness, join index) — that is the engine's job at
+      // recompute time. The store's addPlayer helper builds a correct Player and
+      // catches any recompute rejection so the UI shows a plain message.
+      if (state.settings === null) return state;
+      return {
+        ...state,
+        settings: {
+          ...state.settings,
+          players: [...state.settings.players, action.player],
+        },
+      };
+
+    case 'REMOVE_PLAYER': {
+      if (state.settings === null) return state;
+      const target = state.settings.players.find((p) => p.id === action.playerId);
+      // Only a mid-game joiner may be removed (original players, join index 0,
+      // are part of the seat circle from the start and can't be pulled out).
+      if (target === undefined || (target.joinsBeforeRoundIndex ?? 0) === 0) return state;
+      const remaining = state.settings.players
+        .filter((p) => p.id !== action.playerId)
+        // Re-pack seats so they stay contiguous {0..n-1} after the removal.
+        .sort((a, b) => a.seat - b.seat)
+        .map((p, i) => ({ ...p, seat: i }));
+      return {
+        ...state,
+        settings: { ...state.settings, players: remaining },
+      };
+    }
 
     case 'ADD_ROUND':
       // Guard: cannot add a round before a game has started.
