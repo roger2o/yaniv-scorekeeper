@@ -113,6 +113,7 @@ The CIRCLE viewing view plus history. Both views stay in static seating order.
 - [x] Non-blocking `aria-live` callouts: Assaf, 100-halving, elimination, mid-game join — `src/screens/Callouts.tsx`
 - [ ] Round-by-round history log (caller, hands, outcome, points) — including join events — *deferred: not in this build; the per-round log is a read-only detail panel, lower priority than the core loop. Flag for a follow-up phase.*
 - [x] Undo last round — states what it reverts, full recompute; plus a caught-and-shown recovery when an edit/undo strands a mid-game join (engine error never crashes)
+- [ ] **In-app Help / How-to screen** — reachable any time from a "?" / Help control (Play + Setup screens); renders the shared how-to guide (no install steps) plus a "share this app" link. Content is the single shared block in `docs/landing-and-help-content.md` (Section C) — author once, reuse on the landing page. *Small UI screen; can land alongside the UI phases.*
 
 ---
 
@@ -129,6 +130,13 @@ The CIRCLE viewing view plus history. Both views stay in static seating order.
 - [ ] `vite-plugin-pwa` auto-update strategy (avoid stale-service-worker trap)
 - [ ] Precache full app shell; self-host fonts; network-first/revalidated HTML shell
 - [ ] Verify install + full offline on a real device in airplane mode (test against HTTPS preview, not LAN dev server)
+
+### Phase 10a — Landing / install page (pairs with the PWA install entry point)
+The public page on the same static URL the app is distributed from. It's where each device gets its own copy, so it lands with the PWA/install work.
+- [ ] **Landing page** at the app URL: hero + one-line summary, "Why install?" (offline, full-screen, no app store), and the full how-to guide. Content is in `docs/landing-and-help-content.md` (Part 1 + the shared Section C).
+- [ ] **Install on Android** steps (open in Chrome → install / Add to Home screen prompt or ⋮ menu).
+- [ ] **Install on iPhone / iPad** steps — call out the gotcha: must use **Safari** (Chrome/other browsers can't install a PWA on iOS) → Share button → Add to Home Screen.
+- [ ] Reuse the **same how-to block** as the in-app Help screen (single source — Section C of the content doc); don't write the rules twice.
 
 ---
 
