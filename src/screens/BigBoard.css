@@ -207,6 +207,16 @@
   background: var(--accent);
 }
 
+/* Successful-Yaniv WINNER cue on the round's caller cell. The celebration gold
+   (--celebrate) is the app's "win" colour and is visually DISTINCT from the red
+   Assaf/out markers and the brass/grape accent markers (leader, halving, starts
+   next). Dark warm ink (--chip-text) on celebrate gold clears WCAG AA in BOTH
+   themes (Felt 9.5:1, Arcade 7.47:1). Glyph + text, never colour alone. */
+.scoresheet__mark--yaniv {
+  color: var(--chip-text);
+  background: var(--celebrate);
+}
+
 .scoresheet__mark--joined {
   color: var(--ink);
   background: var(--accent-soft);

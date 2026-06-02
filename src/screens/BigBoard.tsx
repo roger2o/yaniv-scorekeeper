@@ -238,6 +238,7 @@ export function BigBoard({ game }: { game: GameState }) {
                     const total = round.cumulativeAfter[p.playerId];
                     const isCaller = p.playerId === round.callerId;
                     const wasAssafCaller = isAssaf && isCaller;
+                    const wasYanivWinner = !isAssaf && isCaller;
                     const halving = halvingByPlayer.get(p.playerId);
                     const justJoined = joinedThisRound.has(p.playerId);
 
@@ -246,6 +247,7 @@ export function BigBoard({ game }: { game: GameState }) {
                         key={p.playerId}
                         className="scoresheet__cell num"
                         data-assaf={wasAssafCaller}
+                        data-yaniv={wasYanivWinner}
                         data-halved={halvedThisRound.has(p.playerId)}
                         data-eliminated={eliminatedThisRound.has(p.playerId)}
                         data-joined={justJoined}
@@ -265,6 +267,14 @@ export function BigBoard({ game }: { game: GameState }) {
                             aria-label="Assaf penalty plus 30"
                           >
                             <span aria-hidden="true">＋</span>30
+                          </span>
+                        )}
+                        {wasYanivWinner && (
+                          <span
+                            className="scoresheet__mark scoresheet__mark--yaniv"
+                            aria-label="Successful Yaniv — won the round"
+                          >
+                            <span aria-hidden="true">★</span> Yaniv
                           </span>
                         )}
                         {halving && (

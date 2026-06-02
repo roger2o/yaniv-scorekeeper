@@ -143,6 +143,35 @@ describe('BigBoard scoresheet — special-moment markers', () => {
     expect(screen.getByText(/called — Assaf/i)).toBeTruthy();
   });
 
+  it('marks a successful Yaniv on the WINNER (caller) cell, not on an Assaf', () => {
+    // Round 1 (Ann calls, strictly lowest) -> successful Yaniv, Ann wins.
+    // Round 2 (Bo calls but ties/loses) -> Assaf, no Yaniv winner marker.
+    const g = game(threePlayers(), [
+      { callerId: 'a', hands: { a: 1, b: 8, c: 12 } }, // Ann Yaniv (winner)
+      { callerId: 'b', hands: { a: 5, b: 5, c: 9 } }, // Bo Assaf
+    ]);
+    expect(g.rounds[0]!.outcome).toBe('YANIV');
+    expect(g.rounds[1]!.outcome).toBe('ASSAF');
+    render(<BigBoard game={g} />);
+    const rows = bodyRows();
+
+    // Round 1: the Yaniv winner marker sits on Ann's cell (glyph + "Yaniv"),
+    // with the full meaning on the aria-label. Ann is the FIRST player column.
+    const r1AnnCell = within(rows[0]!).getAllByRole('cell')[0] as HTMLElement;
+    expect(r1AnnCell.getAttribute('data-yaniv')).toBe('true');
+    expect(
+      within(r1AnnCell).getByLabelText(/successful yaniv — won the round/i),
+    ).toBeTruthy();
+    expect(within(r1AnnCell).getByText(/yaniv/i)).toBeTruthy();
+
+    // Round 2 is an Assaf: it renders the Assaf marker, NOT the Yaniv one.
+    expect(within(rows[1]!).getByLabelText(/assaf penalty plus 30/i)).toBeTruthy();
+    expect(
+      within(rows[1]!).queryByLabelText(/successful yaniv/i),
+    ).toBeNull();
+    expect(rows[1]!.querySelector('[data-yaniv="true"]')).toBeNull();
+  });
+
   it('marks a 100-halving as "from→to"', () => {
     // Drive Bo's cumulative onto exactly 100 so it halves to 50.
     // R1 Ann Yaniv: Bo 40. R2 Ann Yaniv: Bo 60 -> 100 -> halves to 50.
