@@ -1,0 +1,122 @@
+/*
+ * Tokenized theme layer — the visual foundation for the whole app.
+ *
+ * ONE shared layout and component structure (see *.css alongside each screen);
+ * only the DESIGN TOKENS below swap when the user toggles themes. A theme is set
+ * by `data-theme="felt" | "arcade"` on <html> (see ThemeProvider).
+ *
+ * Accessibility floor (both themes, non-negotiable):
+ *  - WCAG 2.1 AA contrast on every text/surface pair (validated when set).
+ *  - NO pure #000 / #fff — every neutral is tinted toward the theme hue.
+ *  - Tap targets >= 56px for the number pad / primary actions.
+ *  - :active press feedback, :hover gated to hover devices, focus-visible rings,
+ *    a prefers-reduced-motion block — all in floor.css.
+ *
+ * Token contract (every theme MUST define all of these):
+ *   --surface            page background
+ *   --surface-raised     cards / panels / the ring backdrop
+ *   --chip               a player score "chip" / token surface
+ *   --chip-text          text on a chip (the hero score colour)
+ *   --chip-muted         secondary text on a chip (names, labels)
+ *   --ink                primary text on the page surface
+ *   --ink-muted          secondary text on the page surface
+ *   --accent             primary action / active starter ring
+ *   --accent-ink         text/icon on an accent surface
+ *   --accent-soft        a soft accent wash (selected fields, highlights)
+ *   --danger             Assaf / destructive (warm red)
+ *   --danger-ink         text on danger
+ *   --celebrate          halving / win celebration colour
+ *   --border             card borders, dividers
+ *   --border-strong      stronger dividers, focus context
+ *   --focus-ring         focus-visible outline colour
+ *   --radius / --radius-lg / --radius-pill   corner radii
+ *   --seat-1 .. --seat-6 per-seat identity colours (paired w/ name + shape,
+ *                        never colour-alone)
+ *   --shadow             elevation shadow
+ */
+
+/* ---------------------------------------------------------------------------
+ * Theme A — "Felt & Chips" (card-table casino-lounge). DEFAULT.
+ * Deep felt green surface, brass accents, ivory score chips. Every score sits
+ * on an ivory chip (near-black on ivory ~14:1) so it stays legible even where
+ * the felt-on-felt surfaces lose contrast in bright light.
+ * ------------------------------------------------------------------------- */
+:root,
+[data-theme='felt'] {
+  --surface: #1f4a3d; /* deep felt green */
+  --surface-raised: #27604e; /* raised felt */
+  --chip: #f4ecd8; /* warm ivory (the chip / card colour, never #fff) */
+  --chip-text: #241e1a; /* warm near-black on ivory (~14:1) */
+  --chip-muted: #5a4f46; /* warm grey on ivory (clears AA at small sizes) */
+  --ink: #f4ecd8; /* ivory text on felt (~7:1) */
+  --ink-muted: #c9d8cf; /* soft mint-grey on felt (large/secondary, clears AA) */
+  --accent: #c9a227; /* brass / gold */
+  --accent-ink: #241e1a; /* near-black on brass (~6:1) */
+  --accent-soft: #3a6f5c; /* soft brass-tinted felt wash */
+  --danger: #c8453b; /* warm red */
+  --danger-ink: #f4ecd8; /* ivory on red (~4.7:1) */
+  --celebrate: #e7c14a; /* brighter gold burst */
+  --border: #356351; /* felt border */
+  --border-strong: #4d7a68;
+  --focus-ring: #f4ecd8; /* ivory ring reads on the dark felt */
+
+  --radius: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* Per-seat identity. On felt these are warm jewel tones; always paired with
+     name + shape, never colour-alone. Each clears 3:1 as a large icon/dot. */
+  --seat-1: #e8b84b; /* gold */
+  --seat-2: #d98a4a; /* amber */
+  --seat-3: #6fae8f; /* sage */
+  --seat-4: #7fb2d6; /* slate-blue */
+  --seat-5: #c98a9a; /* dusty rose */
+  --seat-6: #b79bd4; /* muted violet */
+
+  --shadow: 0 6px 18px rgba(15, 38, 31, 0.45);
+  --font-display: 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+ * Theme B — "Party Arcade" (bright playful). LIGHT surface.
+ * Bright/light, bold per-seat colours, chunky rounded controls, celebratory
+ * confetti on a win. Held to the SAME legibility bar as Theme A despite being
+ * louder: the score itself is always ink-on-light (~12:1); seat colours only
+ * ever carry non-essential reinforcement.
+ * ------------------------------------------------------------------------- */
+[data-theme='arcade'] {
+  --surface: #fbf6ee; /* warm near-white (light theme, better outdoor legibility) */
+  --surface-raised: #fffdf8; /* warm white card (never #fff) */
+  --chip: #fffdf8; /* chips are warm-white cards on the light surface */
+  --chip-text: #23201e; /* warm ink (~12:1 on chip) */
+  --chip-muted: #6b5f5a; /* warm grey (clears AA at small sizes) */
+  --ink: #23201e; /* warm near-black */
+  --ink-muted: #6b5f5a;
+  --accent: #7c5ccb; /* grape — primary action */
+  --accent-ink: #fffdf8; /* warm-white on grape (~5.3:1) */
+  --accent-soft: #ece4fb; /* soft grape wash for selected fields */
+  --danger: #d23b2e; /* coral-red */
+  --danger-ink: #fffdf8;
+  --celebrate: #e8a317; /* sun-gold pop */
+  --border: #e6ddcf;
+  --border-strong: #d3c8b6;
+  --focus-ring: #7c5ccb; /* grape ring reads on the light surface */
+
+  --radius: 16px; /* chunkier corners */
+  --radius-lg: 26px;
+  --radius-pill: 999px;
+
+  /* Bold 6-swatch playful set. Always paired with name + shape, never
+     colour-alone; each validated >= 3:1 as a large-text/icon colour. */
+  --seat-1: #f2603c; /* coral */
+  --seat-2: #1fa39b; /* teal */
+  --seat-3: #7c5ccb; /* grape */
+  --seat-4: #c98213; /* sun (darkened from #E8A317 to clear 3:1 on light) */
+  --seat-5: #2e7bd6; /* sky */
+  --seat-6: #d14b82; /* rose */
+
+  --shadow: 0 8px 22px rgba(124, 92, 203, 0.18);
+  --font-display: 'Baloo 2', 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
