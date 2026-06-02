@@ -53,11 +53,11 @@ Depends on Phase 1. v1 correctness is the only defence for offline devices that 
 ---
 
 ## Phase 3 — App Shell, State & Persistence
-- [ ] App state wiring around the engine
-- [ ] localStorage persistence on every change, wrapped in try/catch (graceful degrade)
-- [ ] Schema `version` key for forward-compatible saves
-- [ ] Crash-safe restore of in-progress game on load
-- [ ] Screen flow: setup → play → end game
+- [x] App state wiring around the engine (Context + reducer store; derives all displayed state via `recompute`, stores only settings + history + screen)
+- [x] localStorage persistence on every change, wrapped in try/catch (graceful degrade; surfaces a non-fatal storage warning instead of crashing)
+- [x] Schema `version` key for forward-compatible saves (unknown/incompatible version discarded gracefully on load)
+- [x] Crash-safe restore of in-progress game on load (missing/corrupt/incompatible → clean start at setup)
+- [x] Screen flow: setup → play → end game (thin shell; PLACEHOLDER screen content only — real UI is Phases 4–7)
 
 ---
 
@@ -131,6 +131,6 @@ Depends on Phase 8 + Phase 10.
 ---
 
 ## Current Focus
-**Phases 0 and 1 complete (Turing).** React + Vite + TypeScript scaffold in place; `vite-plugin-pwa` installed (not wired); Vitest running; dev server binds `--host`. Pure scoring engine built under `src/engine/` with a `recompute(history, settings)` single-source-of-truth design and 23 passing developer tests covering all locked rules and key boundaries. Initial local commit made (no remote — Wells owns git remote/deploy).
+**Phases 0–3 complete (Turing).** Scaffold + verified engine (Phases 0–2) in place. Phase 3 adds the application state layer and crash-safe persistence under `src/state/`, plus a thin app shell that switches setup → play → end with PLACEHOLDER screens under `src/screens/`. The store (Context + reducer) holds only the source-of-truth (settings + round-history + screen) and derives all displayed state via `recompute`. Persistence is versioned and fully try/catch-wrapped: storage failures degrade to a non-fatal warning, and missing/corrupt/incompatible saves start cleanly at setup. Full suite green: 118 tests (82 engine + 36 state/persistence), clean TypeScript + Vite build. **No real UI was built** — screens are obviously provisional stubs to drive the flow only.
 
-**Next:** Phase 2 — Bugsy hardens the engine with the full adversarial TEST-1..22 suite, then Holmes reviews the engine before any UI.
+**Next:** Phase 4 — UI Setup screen (human reviews the UI design before it is built).
