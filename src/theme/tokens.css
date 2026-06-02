@@ -53,8 +53,8 @@
   --accent: #c9a227; /* brass / gold */
   --accent-ink: #241e1a; /* near-black on brass (~6:1) */
   --accent-soft: #3a6f5c; /* soft brass-tinted felt wash */
-  --danger: #c8453b; /* warm red */
-  --danger-ink: #f4ecd8; /* ivory on red (~4.7:1) */
+  --danger: #b3382f; /* warm red (darkened so ivory-on-danger clears WCAG AA) */
+  --danger-ink: #f4ecd8; /* ivory on red (~5.06:1, clears 4.5:1 AA) */
   --celebrate: #e7c14a; /* brighter gold burst */
   --border: #356351; /* felt border */
   --border-strong: #4d7a68;
