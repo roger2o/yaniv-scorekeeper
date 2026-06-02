@@ -55,6 +55,17 @@ export interface StoreValue extends StoreActions {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
+/**
+ * A non-fatal "previous game couldn't be restored" state: a clean setup screen
+ * carrying a `corrupt-discarded` warning so the UI can later explain the loss.
+ */
+function discardedState(message: string): AppState {
+  return {
+    ...initialState,
+    storageWarning: { kind: 'corrupt-discarded', message },
+  };
+}
+
 /** Lazy initialiser: attempt a crash-safe restore from localStorage on load. */
 function init(storage: Storage | null | undefined): AppState {
   // `undefined` => use the module default (real localStorage). `null` => no
@@ -62,13 +73,36 @@ function init(storage: Storage | null | undefined): AppState {
   const result = storage === undefined ? loadGame() : loadGame(storage);
 
   switch (result.status) {
-    case 'ok':
+    case 'ok': {
+      // The persistence layer validates STRUCTURE only — it deliberately does
+      // not enforce game-rule validity. A shape-valid but engine-illegal save
+      // (hand-edited or partially-corrupted localStorage: <2 players, bad
+      // seats, a round after the game auto-ended, etc.) would otherwise restore
+      // to the play screen and then THROW out of `recompute` during render — a
+      // white-screen crash on load. So we run the engine once here as the final
+      // admission gate: only state the engine accepts is ever restored. This
+      // also covers any over-long / malformed history the structural check
+      // can't reason about.
+      const { settings, history } = result.state;
+      try {
+        if (settings !== null) {
+          recompute(history, settings);
+        }
+      } catch {
+        // Engine rejected the saved game. Discard it and start clean, exactly
+        // like the corrupt-JSON case — surfacing a non-fatal warning.
+        if (storage === undefined) clearGame();
+        else clearGame(storage);
+        return discardedState('saved game could not be restored');
+      }
       return { ...result.state, storageWarning: null };
+    }
     case 'empty':
       return initialState;
     case 'discarded':
-      // Corrupt or incompatible save was ignored; start fresh, no scary error.
-      return initialState;
+      // Corrupt or incompatible save was ignored; start fresh, no scary error,
+      // but surface a non-fatal warning so the UI can explain the lost game.
+      return discardedState(result.reason);
     case 'unavailable':
       // Storage can't be read; run in memory and warn non-fatally.
       return {
@@ -139,9 +173,18 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
   );
 
   // Derived game state: the ONLY source of standings/totals/callouts/winner.
+  // Fix #1 ensures only engine-valid state is ever ADMITTED on restore, so this
+  // selector should never see invalid input from the load path. As a render-time
+  // safety net it is still wrapped: a `recompute` throw here (e.g. a live action
+  // somehow producing engine-illegal history) must NEVER white-screen the shell.
+  // We return null on throw — the shell treats "no derived game" gracefully.
   const game: GameState | null = useMemo(() => {
     if (state.settings === null) return null;
-    return recompute(state.history, state.settings);
+    try {
+      return recompute(state.history, state.settings);
+    } catch {
+      return null;
+    }
   }, [state.history, state.settings]);
 
   const value: StoreValue = useMemo(

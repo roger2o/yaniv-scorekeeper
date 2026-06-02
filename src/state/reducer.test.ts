@@ -109,19 +109,6 @@ describe('reducer — end / restore / warning', () => {
     expect(s.screen).toBe('setup');
   });
 
-  it('RESTORE replaces the whole slice', () => {
-    const settings = makeSettings();
-    const s = reducer(initialState, {
-      type: 'RESTORE',
-      settings,
-      history: [r1, r2],
-      screen: 'play',
-    });
-    expect(s.settings).toBe(settings);
-    expect(s.history).toEqual([r1, r2]);
-    expect(s.screen).toBe('play');
-  });
-
   it('SET_STORAGE_WARNING sets and clears the warning', () => {
     let s = reducer(initialState, {
       type: 'SET_STORAGE_WARNING',

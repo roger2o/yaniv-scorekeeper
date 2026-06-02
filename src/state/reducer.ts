@@ -29,8 +29,6 @@ export type Action =
   | { type: 'END_GAME' }
   /** Reset everything back to a clean setup screen. */
   | { type: 'RESET_GAME' }
-  /** Replace the whole slice (used to restore a persisted game on load). */
-  | { type: 'RESTORE'; settings: GameSettings | null; history: RoundEntry[]; screen: AppState['screen'] }
   /** Set or clear the non-fatal storage warning. */
   | { type: 'SET_STORAGE_WARNING'; warning: StorageWarning };
 
@@ -85,14 +83,6 @@ export function reducer(state: AppState, action: Action): AppState {
       // Back to a clean slate; preserve any current storage warning so a
       // persistence problem stays visible across a reset.
       return { ...initialState, storageWarning: state.storageWarning };
-
-    case 'RESTORE':
-      return {
-        ...state,
-        settings: action.settings,
-        history: action.history,
-        screen: action.screen,
-      };
 
     case 'SET_STORAGE_WARNING':
       return { ...state, storageWarning: action.warning };
