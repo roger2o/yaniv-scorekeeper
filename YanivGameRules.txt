@@ -1,0 +1,72 @@
+Yaniv is a very popular Israeli card game, especially among backpackers, soldiers, and students. The goal is to have the **lowest total value in your hand** and successfully call **"Yaniv!"** before anyone else can beat or tie your score. 
+
+### Setup
+
+* 2–5 players (more is possible).
+* Standard 54-card deck (52 cards + 2 jokers).
+* Deal **5 cards** to each player.
+* Place the remaining cards face down as a draw pile.
+* Turn over the top card to start the discard pile. 
+
+### Card Values
+
+| Card    | Value      |
+| ------- | ---------- |
+| Joker   | 0          |
+| Ace     | 1          |
+| 2–10    | Face value |
+| J, Q, K | 10         |
+
+
+### On Your Turn
+
+You may discard:
+
+1. A single card.
+2. Two or more cards of the same rank (e.g., 7♣ 7♥ 7♠).
+3. A run of **3 or more consecutive cards in the same suit** (e.g., 4♥ 5♥ 6♥). Aces are low only (A-2-3 is allowed; Q-K-A is not). 
+
+After discarding, draw:
+
+* The top card from the draw pile, **or**
+* A card from the discard pile. If the previous player discarded multiple cards, you may usually take only the first or last card of that discard set. 
+
+### Calling "Yaniv"
+
+At the **start of your turn**, if your hand total is at or below the agreed threshold (most commonly **7 points**), you may call **"Yaniv!"** instead of taking a turn. Everyone reveals their cards. 
+
+### Successful Yaniv
+
+If your hand total is lower than everyone else's:
+
+* You score **0 points** for the round.
+* Everyone else scores the value of the cards remaining in their hand. 
+* If you are successful, you start the next round.
+
+### Assaf (The Trap!)
+
+If **any other player has the same total or a lower total** than the person who called Yaniv:
+
+* The caller gets **their hand value + 30 penalty points**.
+* The player who "caught" them still scores their hand value but get to start the next round. This is called **"Assaf"**. 
+
+Example:
+
+* You call Yaniv with 6.
+* Another player reveals 5 (or even another 6).
+* You get **36 points** (6 + 30 penalty).
+* They get their hand value. 
+
+### Winning the Game
+
+Players keep cumulative scores across rounds and finish when they agree (i.e. can be never ending)
+* Lowest total score wins. 
+
+### Common Israeli House Rules
+
+
+* Exact **100, 200, 300, etc** points halve your score.
+* Some play with a Yaniv threshold of 5 or 11, instead of 7.
+* Jokers are allowed as wild cards in runs. 
+
+A lot of the strategy revolves around estimating what other players are holding and deciding whether your 5–7 point hand is safe enough to risk a Yaniv call—or whether someone is waiting to Assaf you. 😄
