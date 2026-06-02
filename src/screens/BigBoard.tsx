@@ -31,6 +31,7 @@
  * Terminology: a player "starts the next round" — never "deals/dealer".
  */
 
+import { useEffect, useRef, useState } from 'react';
 import type { GameState, ResolvedRound } from '../engine';
 import { seatColorVar, seatShape } from './seat';
 import './BigBoard.css';
@@ -39,6 +40,25 @@ function leaderIdOf(game: GameState): string | null {
   const contenders = game.standings.filter((s) => !s.eliminated);
   if (contenders.length === 0) return null;
   return contenders.reduce((best, s) => (s.total < best.total ? s : best)).playerId;
+}
+
+/**
+ * Plain-language announcement when a round lands, for a screen-reader user
+ * watching the board. The <Callouts> banner only announces the special moments
+ * (Assaf, halving, elimination, join); a routine Yaniv round committing — and
+ * the new running totals — would otherwise be silent. This polite live region
+ * fills that gap. Derived from the last resolved round.
+ */
+function boardAnnouncement(game: GameState): string {
+  const last = game.rounds[game.rounds.length - 1];
+  if (!last) return '';
+  const nameOf = (id: string | null) =>
+    game.standings.find((s) => s.playerId === id)?.name ?? 'A player';
+  const outcome = last.outcome === 'ASSAF' ? 'an Assaf' : 'a Yaniv';
+  const totals = game.standings
+    .map((s) => `${s.name} ${s.total}${s.eliminated ? ' (out)' : ''}`)
+    .join(', ');
+  return `Round ${last.index + 1} recorded — ${nameOf(last.callerId)} called ${outcome}. Totals now: ${totals}.`;
 }
 
 /** Compact note for a round: who called and the outcome. No "deal/dealer". */
@@ -68,12 +88,58 @@ export function BigBoard({ game }: { game: GameState }) {
       seedById.set(j.playerId, j.seed);
     }
   }
+  // A player who joined AFTER the last recorded round is in `pendingJoins`
+  // (active, seeded, but has not yet played a round). They still appear in
+  // standings, so seed their join index ONE PAST the last row — every historical
+  // cell renders BLANK like any not-yet-active player, and their join/seed marker
+  // shows at that one-past index rather than being mistaken for an original
+  // player with a column of zeros.
+  for (const j of game.pendingJoins) {
+    joinIndexById.set(j.playerId, game.rounds.length);
+    seedById.set(j.playerId, j.seed);
+  }
   // A player with no recorded join event is an original (active from round 0).
   const joinIndexOf = (playerId: string) => joinIndexById.get(playerId) ?? 0;
 
+  // --- Horizontal-overflow hint (T-B1) -------------------------------------
+  // When the player columns overflow the viewport (6+ players at 375px), the
+  // sheet scrolls sideways. Surface a small "scroll for more players" hint so
+  // nobody assumes the visible columns are the whole table. We measure the real
+  // scroll container so the hint only shows when there is actually more to see.
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => setOverflowing(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(check) : null;
+    ro?.observe(el);
+    return () => ro?.disconnect();
+  }, [players.length, game.rounds.length]);
+
   return (
-    <div className="scoresheet__scroll" data-testid="scoresheet-scroll">
-      <table className="scoresheet" data-testid="big-board">
+    <div className="scoresheet">
+      {/* Polite live region: announces a committed round + new totals to a
+          screen-reader user on the board, even on a routine Yaniv with no
+          special-moment callout. Visually hidden; aria-live does the work. */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {boardAnnouncement(game)}
+      </div>
+
+      {overflowing && (
+        <p className="scoresheet__overflow-hint" data-testid="scoresheet-overflow-hint">
+          <span aria-hidden="true">↔</span> Scroll sideways for more players
+        </p>
+      )}
+
+      <div
+        className="scoresheet__scroll"
+        data-testid="scoresheet-scroll"
+        ref={scrollRef}
+      >
+        <table className="scoresheet__table" data-testid="big-board">
         <caption>
           Scoresheet — running totals by round, in seating order (oldest at top)
         </caption>
@@ -125,7 +191,7 @@ export function BigBoard({ game }: { game: GameState }) {
                 <span className="scoresheet__round-no tabular">—</span>
               </th>
               <td className="scoresheet__empty" colSpan={players.length}>
-                No rounds played yet.
+                Nothing scored yet — play a round!
               </td>
             </tr>
           ) : (
@@ -188,21 +254,34 @@ export function BigBoard({ game }: { game: GameState }) {
                           {total ?? '—'}
                         </span>
 
-                        {/* In-cell markers: glyph + text, never colour-alone. */}
+                        {/* In-cell markers: glyph + text, never colour-alone.
+                            Copy is kept SHORT so it fits a ~56px column without
+                            clipping — the full word ("Assaf" / "joined") lives in
+                            the round-row note where there is room. An aria-label
+                            carries the full meaning for screen readers. */}
                         {wasAssafCaller && (
-                          <span className="scoresheet__mark scoresheet__mark--assaf">
-                            <span aria-hidden="true">＋</span> Assaf +30
+                          <span
+                            className="scoresheet__mark scoresheet__mark--assaf"
+                            aria-label="Assaf penalty plus 30"
+                          >
+                            <span aria-hidden="true">＋</span>30
                           </span>
                         )}
                         {halving && (
-                          <span className="scoresheet__mark scoresheet__mark--halved">
+                          <span
+                            className="scoresheet__mark scoresheet__mark--halved"
+                            aria-label={`Halved from ${halving.from} to ${halving.to}`}
+                          >
                             <span aria-hidden="true">↓</span> {halving.from}→
                             {halving.to}
                           </span>
                         )}
                         {justJoined && (
-                          <span className="scoresheet__mark scoresheet__mark--joined">
-                            <span aria-hidden="true">＋</span> joined · seed{' '}
+                          <span
+                            className="scoresheet__mark scoresheet__mark--joined"
+                            aria-label={`Joined the game, seeded at ${seedById.get(p.playerId) ?? total}`}
+                          >
+                            <span aria-hidden="true">＋</span> join{' '}
                             {seedById.get(p.playerId) ?? total}
                           </span>
                         )}
@@ -233,14 +312,24 @@ export function BigBoard({ game }: { game: GameState }) {
             </th>
             {players.map((p) => {
               const startsNext = p.playerId === game.startsNextId && !game.gameOver;
+              const isLeader = p.playerId === leaderId;
               return (
                 <td
                   key={p.playerId}
                   className="scoresheet__cell scoresheet__cell--total num"
                   data-starts-next={startsNext}
+                  data-leader={isLeader}
                   data-eliminated={p.eliminated}
                 >
                   <span className="scoresheet__total tabular">{p.total}</span>
+                  {/* Reinforce the leader where the eye looks for "who's winning"
+                      — the current-totals cell — with a glyph + text marker, not
+                      colour alone. (The header keeps its crown too.) */}
+                  {isLeader && (
+                    <span className="scoresheet__mark scoresheet__mark--leader">
+                      <span aria-hidden="true">👑</span> leader
+                    </span>
+                  )}
                   {startsNext && (
                     <span className="scoresheet__mark scoresheet__mark--starts">
                       <span aria-hidden="true">▸</span> starts next
@@ -256,7 +345,8 @@ export function BigBoard({ game }: { game: GameState }) {
             })}
           </tr>
         </tfoot>
-      </table>
+        </table>
+      </div>
     </div>
   );
 }

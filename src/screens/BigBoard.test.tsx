@@ -136,7 +136,9 @@ describe('BigBoard scoresheet — special-moment markers', () => {
     const g = game(threePlayers(), [{ callerId: 'a', hands: { a: 5, b: 5, c: 9 } }]);
     expect(g.rounds[0]!.outcome).toBe('ASSAF');
     render(<BigBoard game={g} />);
-    expect(screen.getByText(/Assaf \+30/i)).toBeTruthy();
+    // In-cell pill is shortened to "+30"; the full meaning is on the aria-label,
+    // and the word "Assaf" lives in the round-row note where there is room.
+    expect(screen.getByLabelText(/Assaf penalty plus 30/i)).toBeTruthy();
     // The round note also says Assaf, and never "deal".
     expect(screen.getByText(/called — Assaf/i)).toBeTruthy();
   });
@@ -194,8 +196,50 @@ describe('BigBoard scoresheet — special-moment markers', () => {
       .getByLabelText('Dee not yet in the game');
     expect(r1DeeCell).toBeTruthy();
 
-    // Round 2: Dee's join marker with the derived seed appears.
-    expect(within(rows[1]!).getByText(/joined · seed/i)).toBeTruthy();
+    // Round 2: Dee's join marker with the derived seed appears (short in-cell
+    // copy "join N"; full meaning carried on the aria-label).
+    expect(within(rows[1]!).getByLabelText(/joined the game, seeded at/i)).toBeTruthy();
+    expect(within(rows[1]!).getByText(/join \d/i)).toBeTruthy();
+  });
+
+  it('renders a join that lands AFTER the last recorded round (pendingJoins)', () => {
+    // Two rounds played by Ann + Bo; then Dee joins before round index 2 — one
+    // past the last recorded round. The engine reports Dee on `pendingJoins`,
+    // NOT on any round's `joins`. Dee still appears in standings, so the board
+    // must render Dee's history cells BLANK (not a column of zeros) and show the
+    // join/seed marker at the join point.
+    const settings: GameSettings = {
+      players: [
+        { id: 'a', name: 'Ann', seat: 0 },
+        { id: 'b', name: 'Bo', seat: 1 },
+        { id: 'd', name: 'Dee', seat: 2, joinsBeforeRoundIndex: 2 },
+      ],
+      threshold: 7,
+      halvingEnabled: false,
+      knockoutScore: null,
+    };
+    const g = game(settings, [
+      { callerId: 'a', hands: { a: 0, b: 12 } }, // round 1 — Dee not in yet
+      { callerId: 'b', hands: { a: 5, b: 0 } }, // round 2 — Dee still not in
+    ]);
+    // Sanity: Dee is a PENDING join (after the last round), not on a round's joins.
+    expect(g.pendingJoins.some((j) => j.playerId === 'd')).toBe(true);
+    expect(g.rounds.every((r) => r.joins.every((j) => j.playerId !== 'd'))).toBe(true);
+
+    render(<BigBoard game={g} />);
+    const rows = bodyRows();
+
+    // Every historical row shows Dee BLANK — never a zero total.
+    expect(within(rows[0]!).getByLabelText('Dee not yet in the game')).toBeTruthy();
+    expect(within(rows[1]!).getByLabelText('Dee not yet in the game')).toBeTruthy();
+
+    // Dee still appears in the current-totals row (active, seeded) with the seed,
+    // and is NOT misrendered as an original player who scored zero across the game.
+    const totals = screen.getByTestId('scoresheet-totals');
+    const deeCol = settings.players.findIndex((p) => p.id === 'd'); // 0-based player col
+    const deeTotalCell = totals.querySelectorAll('td')[deeCol] as HTMLElement;
+    const pendingSeed = g.pendingJoins.find((j) => j.playerId === 'd')!.seed;
+    expect(within(deeTotalCell).getByText(String(pendingSeed))).toBeTruthy();
   });
 });
 
@@ -220,7 +264,7 @@ describe('BigBoard scoresheet — current totals & who starts next', () => {
   it('handles an empty history (no rounds yet) without crashing', () => {
     const g = game(threePlayers(), []);
     render(<BigBoard game={g} />);
-    expect(screen.getByText(/No rounds played yet/i)).toBeTruthy();
+    expect(screen.getByText(/Nothing scored yet/i)).toBeTruthy();
     // Totals row still present with the seeded zeros.
     expect(screen.getByTestId('scoresheet-totals')).toBeTruthy();
   });

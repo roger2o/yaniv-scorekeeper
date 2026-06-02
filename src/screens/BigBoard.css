@@ -12,6 +12,19 @@
  * feedback, hover-gating and reduced-motion all come from floor.css globally.
  */
 
+/* Outer block: holds the live region, the overflow hint, and the scroll box. */
+.scoresheet {
+  display: block;
+}
+
+/* Horizontal-overflow hint (shown only when columns actually overflow). */
+.scoresheet__overflow-hint {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+}
+
 .scoresheet__scroll {
   /* Vertical scroll is the primary motion; horizontal only kicks in when the
      columns genuinely overflow (many/long names at 375px). */
@@ -23,14 +36,14 @@
   background: var(--surface-raised);
 }
 
-.scoresheet {
+.scoresheet__table {
   width: 100%;
   border-collapse: separate; /* separate so sticky cells keep their borders */
   border-spacing: 0;
   color: var(--ink);
 }
 
-.scoresheet caption {
+.scoresheet__table caption {
   caption-side: top;
   text-align: left;
   font-weight: 800;
@@ -55,7 +68,7 @@
 }
 
 /* --- The header row (players): sticky vertically so it stays in view ----- */
-.scoresheet thead th {
+.scoresheet__table thead th {
   position: sticky;
   top: 0;
   z-index: 3;
@@ -64,7 +77,7 @@
 }
 
 /* The top-left corner cell must sit above both sticky axes. */
-.scoresheet thead .scoresheet__round-head {
+.scoresheet__table thead .scoresheet__round-head {
   z-index: 4;
 }
 
@@ -86,13 +99,17 @@
   line-height: 1.15;
 }
 
-/* Truncate long names in the header; full name is on the th title attribute. */
+/* Long names WRAP to two lines (so two similar names are distinguishable on a
+   phone — title text is unreachable on touch). Past two lines we ellipsis the
+   third, which is rare. Wider cap than before to fit a typical name on one line. */
 .scoresheet__player-name-text {
-  display: inline-block;
-  max-width: 72px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  max-width: 92px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   vertical-align: bottom;
 }
 
@@ -201,6 +218,15 @@
 }
 
 .scoresheet__mark--starts {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+/* Leader cue on the current-totals ("Now") cell — where the eye looks for
+   "who's winning". Glyph + the word "leader", not colour alone. Uses the
+   high-contrast accent pill (accent-ink on accent) so it reads on the
+   accent-soft totals-row background. */
+.scoresheet__mark--leader {
   color: var(--accent-ink);
   background: var(--accent);
 }
