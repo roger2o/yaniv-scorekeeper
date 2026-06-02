@@ -47,11 +47,27 @@ function validateSettings(settings: GameSettings): void {
     if (ids.has(p.id)) {
       throw new EngineInputError(`Duplicate player id: ${p.id}`);
     }
+    // [INVARIANT] Each seat must be a non-negative integer (no floats / signs).
+    if (typeof p.seat !== 'number' || !Number.isInteger(p.seat) || p.seat < 0) {
+      throw new EngineInputError(
+        `Seat index for player "${p.id}" must be a non-negative integer, got: ${String(p.seat)}`,
+      );
+    }
     if (seats.has(p.seat)) {
       throw new EngineInputError(`Duplicate seat index: ${p.seat}`);
     }
     ids.add(p.id);
     seats.add(p.seat);
+  }
+  // [INVARIANT] Seats must be exactly {0, 1, …, players.length-1} — contiguous
+  // and 0-based, in the order players were added. This guarantees the seat
+  // circle has no gaps, so clockwise tie-break and next-dealer logic are sound.
+  for (let i = 0; i < players.length; i++) {
+    if (!seats.has(i)) {
+      throw new EngineInputError(
+        `Seats must be contiguous from 0 to ${players.length - 1}; missing seat ${i}.`,
+      );
+    }
   }
   if (settings.knockoutScore !== null) {
     if (!Number.isInteger(settings.knockoutScore) || settings.knockoutScore < 0) {
@@ -71,24 +87,32 @@ function bySeat(players: Player[]): Player[] {
 
 /**
  * Among `candidateIds`, find the one with the lowest hand value; break ties by
- * clockwise seat order starting immediately after the caller's seat (caller+1,
- * +2, ... wrapping). [RULE 2]
+ * clockwise seat order starting immediately after the caller, wrapping around
+ * the circle. [RULE 2]
+ *
+ * Clockwise rank is computed by SORTED-ARRAY POSITION (not by raw seat number),
+ * identical to `nextActiveAfterSeat`, so the two code paths agree for any seat
+ * values — even non-contiguous ones. (Settings validation enforces contiguous
+ * 0-based seats, so this is a defensive belt-and-braces guarantee.)
  */
 function lowestThenClockwise(
   candidateIds: string[],
   hands: Record<string, number>,
-  callerSeat: number,
+  callerId: string,
   seatOrder: Player[],
 ): string {
-  const seatCount = seatOrder.length;
-  const seatOfId = new Map<string, number>();
-  for (const p of seatOrder) seatOfId.set(p.id, p.seat);
+  const n = seatOrder.length;
+  // Position of each player id within the seat-sorted array.
+  const posOfId = new Map<string, number>();
+  seatOrder.forEach((p, idx) => posOfId.set(p.id, idx));
+  const callerPos = posOfId.get(callerId)!;
 
-  // Clockwise distance from the seat just after the caller.
+  // Clockwise distance from the position just after the caller, by sorted
+  // position — matches how nextActiveAfterSeat walks the circle.
   const clockwiseRank = (id: string): number => {
-    const seat = seatOfId.get(id);
-    if (seat === undefined) return Number.MAX_SAFE_INTEGER;
-    return (seat - callerSeat - 1 + seatCount) % seatCount;
+    const pos = posOfId.get(id);
+    if (pos === undefined) return Number.MAX_SAFE_INTEGER;
+    return (pos - callerPos - 1 + n) % n;
   };
 
   let best: string | null = null;
@@ -121,10 +145,8 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
   validateSettings(settings);
 
   const seatOrder = bySeat(settings.players);
-  const seatOfId = new Map<string, number>();
   const nameOfId = new Map<string, string>();
   for (const p of seatOrder) {
-    seatOfId.set(p.id, p.seat);
     nameOfId.set(p.id, p.name);
   }
 
@@ -169,6 +191,16 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
       }
       assertValidHandValue(entry.hands[id], nameOfId.get(id) ?? id);
     }
+    // Reject any EXTRA hand id that is not an active player (stale/typo'd id,
+    // e.g. an eliminated player's hand re-entered). Swallowing it silently
+    // would let bad input through unnoticed.
+    for (const id of Object.keys(entry.hands)) {
+      if (!activeSet.has(id)) {
+        throw new EngineInputError(
+          `Round ${i}: hand total entered for "${id}", who is not an active player.`,
+        );
+      }
+    }
 
     const callerId = entry.callerId;
     const callerHand = entry.hands[callerId]!;
@@ -208,12 +240,7 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
       nextStarter = callerId; // caller starts next on a successful Yaniv
     } else {
       // Lowest hand among the catchers; ties -> clockwise after caller.
-      nextStarter = lowestThenClockwise(
-        catcherIds,
-        entry.hands,
-        seatOfId.get(callerId)!,
-        seatOrder,
-      );
+      nextStarter = lowestThenClockwise(catcherIds, entry.hands, callerId, seatOrder);
     }
 
     // --- Apply round scores to cumulative totals ---
@@ -337,3 +364,11 @@ function nextActiveAfterSeat(
   }
   return callerId;
 }
+
+/**
+ * Test-only access to internal helpers. NOT part of the public engine API and
+ * NOT re-exported from index.ts — exposed solely so the defensive clockwise
+ * tie-break logic can be exercised against gappy seat values that the public
+ * `recompute` entry point rejects at validation. Do not use in app code.
+ */
+export const __testInternals = { lowestThenClockwise };

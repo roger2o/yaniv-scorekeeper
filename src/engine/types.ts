@@ -21,7 +21,13 @@ export interface Player {
   id: string;
   /** Display name as typed at setup. */
   name: string;
-  /** Stable seat index, 0-based, in the order players were added. */
+  /**
+   * Stable seat index, in the order players were added. ENFORCED INVARIANT
+   * (validated in the engine): across all players the seats must be exactly
+   * {0, 1, …, players.length-1} — contiguous, 0-based, non-negative integers,
+   * no gaps and no duplicates. This guarantees a gap-free clockwise seat circle
+   * for the multiple-catcher tie-break. Seats never change once the game starts.
+   */
   seat: number;
 }
 

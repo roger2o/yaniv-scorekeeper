@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recompute } from './engine';
+import { recompute, __testInternals } from './engine';
 import { EngineInputError, type GameSettings, type Player, type RoundEntry } from './types';
 
 // --------------------------------------------------------------------------
@@ -303,5 +303,132 @@ describe('eliminated players', () => {
     expect(state.standings.find((p) => p.playerId === 'dan')!.eliminated).toBe(true);
     expect(state.rounds[1]!.outcome).toBe('YANIV');
     expect(state.activePlayerIds).toEqual(['ann', 'bob', 'cara']);
+  });
+});
+
+// --------------------------------------------------------------------------
+// Holmes review fixes — regression tests (2026-06-02)
+// --------------------------------------------------------------------------
+
+describe('M1 — clockwise tie-break ranks by sorted seat position (gappy seats)', () => {
+  // The public recompute() now REJECTS non-contiguous seats at validation, so
+  // the defensive clockwise-rank logic is exercised directly via the test-only
+  // internal export against genuinely gappy seat values. The old raw-seat
+  // arithmetic disagreed with nextActiveAfterSeat on such seats; this pins the
+  // corrected, position-based behavior.
+  const { lowestThenClockwise } = __testInternals;
+
+  it('picks the catcher immediately clockwise after the caller on gappy seats', () => {
+    // Seats [0, 5, 9] -> sorted positions [0, 1, 2].
+    // Caller sits at seat 5 (position 1). Two catchers tie on hand value: the
+    // player at seat 9 (position 2, immediately clockwise) and seat 0
+    // (position 0, the far side of the circle). Position-based rank picks
+    // seat 9. The old raw-seat formula gave both rank 0 and chose arbitrarily.
+    const seatOrder: Player[] = [
+      { id: 'a', name: 'A', seat: 0 },
+      { id: 'b', name: 'B', seat: 5 },
+      { id: 'c', name: 'C', seat: 9 },
+    ];
+    const hands = { a: 4, b: 8, c: 4 }; // a and c tie as catchers
+    expect(lowestThenClockwise(['a', 'c'], hands, 'b', seatOrder)).toBe('c');
+  });
+
+  it('wraps past the highest seat back to a low seat on gappy seats', () => {
+    // Seats [2, 4, 8] -> positions [0, 1, 2]. Caller at seat 8 (position 2).
+    // Tied catchers at seat 2 (position 0, first clockwise after wrap) and
+    // seat 4 (position 1). Wrap-around picks seat 2.
+    const seatOrder: Player[] = [
+      { id: 'x', name: 'X', seat: 2 },
+      { id: 'y', name: 'Y', seat: 4 },
+      { id: 'z', name: 'Z', seat: 8 },
+    ];
+    const hands = { x: 6, y: 6, z: 9 };
+    expect(lowestThenClockwise(['x', 'y'], hands, 'z', seatOrder)).toBe('x');
+  });
+
+  it('strictly lower hand still wins over clockwise order on gappy seats', () => {
+    const seatOrder: Player[] = [
+      { id: 'a', name: 'A', seat: 0 },
+      { id: 'b', name: 'B', seat: 5 },
+      { id: 'c', name: 'C', seat: 9 },
+    ];
+    const hands = { a: 7, b: 8, c: 3 }; // c lower than a
+    expect(lowestThenClockwise(['a', 'c'], hands, 'b', seatOrder)).toBe('c');
+  });
+});
+
+describe('M1 / m2 — seat validation (contiguous, 0-based, non-negative integers)', () => {
+  it('rejects non-contiguous (gappy) seats', () => {
+    const s = settings({
+      players: [
+        { id: 'a', name: 'A', seat: 0 },
+        { id: 'b', name: 'B', seat: 5 },
+        { id: 'c', name: 'C', seat: 9 },
+      ],
+    });
+    expect(() => recompute([], s)).toThrow(EngineInputError);
+  });
+
+  it('rejects seats that are 1-based rather than 0-based', () => {
+    const s = settings({
+      players: [
+        { id: 'a', name: 'A', seat: 1 },
+        { id: 'b', name: 'B', seat: 2 },
+        { id: 'c', name: 'C', seat: 3 },
+      ],
+    });
+    expect(() => recompute([], s)).toThrow(EngineInputError);
+  });
+
+  it('rejects a negative seat', () => {
+    const s = settings({
+      players: [
+        { id: 'a', name: 'A', seat: -1 },
+        { id: 'b', name: 'B', seat: 0 },
+        { id: 'c', name: 'C', seat: 1 },
+      ],
+    });
+    expect(() => recompute([], s)).toThrow(EngineInputError);
+  });
+
+  it('rejects a non-integer (fractional) seat', () => {
+    const s = settings({
+      players: [
+        { id: 'a', name: 'A', seat: 0 },
+        { id: 'b', name: 'B', seat: 1.5 },
+        { id: 'c', name: 'C', seat: 2 },
+      ],
+    });
+    expect(() => recompute([], s)).toThrow(EngineInputError);
+  });
+
+  it('accepts contiguous 0-based seats supplied out of array order', () => {
+    // Validation cares about the SET of seats, not the array order.
+    const s = settings({
+      players: [
+        { id: 'c', name: 'C', seat: 2 },
+        { id: 'a', name: 'A', seat: 0 },
+        { id: 'b', name: 'B', seat: 1 },
+      ],
+    });
+    expect(() => recompute([], s)).not.toThrow();
+  });
+});
+
+describe('m1 — unknown / stale hand ids are rejected', () => {
+  it('rejects an unknown id in a round’s hands, naming the offender', () => {
+    const s = settings();
+    expect(() => recompute([round('ann', { ann: 3, bob: 5, cara: 8, ghost: 1 })], s)).toThrow(
+      /ghost/,
+    );
+  });
+
+  it('rejects an eliminated player’s re-entered hand', () => {
+    const s = settings({ players: players(['Ann', 'Bob', 'Cara']), knockoutScore: 50, halvingEnabled: false });
+    const history: RoundEntry[] = [
+      round('ann', { ann: 1, bob: 60, cara: 5 }), // Bob eliminated (60 > 50)
+      round('ann', { ann: 1, cara: 5, bob: 999 }), // stale eliminated id
+    ];
+    expect(() => recompute(history, s)).toThrow(EngineInputError);
   });
 });

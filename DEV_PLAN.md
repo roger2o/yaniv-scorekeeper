@@ -40,15 +40,15 @@ Pure logic, no UI. Single source of truth = the ordered round-history list.
 ## Phase 2 — Engine Test Suite (Bugsy)
 Depends on Phase 1. v1 correctness is the only defence for offline devices that can't be patched.
 
-- [ ] Yaniv/Assaf detection incl. exact-tie boundary (TEST-1..6)
-- [ ] +30 penalty and catcher scoring (TEST-7, 8)
-- [ ] Multiple-catcher tie-break incl. seat wrap (TEST-9..11)
-- [ ] Halving: exact 100, no-cascade on 200/400, boundaries 99/101, toggle off, two players same round (TEST-12..13d)
-- [ ] Elimination: exact-100 rescue, strict `>` boundary, simultaneous halving+elimination, last-player auto-end (TEST-14..16b)
-- [ ] Successful-Yaniv count (TEST-17, 17b)
-- [ ] Undo/edit replay: un-halve, Yaniv↔Assaf edit, reinstate eliminated player, idempotent recompute (TEST-18..18e)
-- [ ] Input contract, threshold variants, invariants, 6-player table (TEST-19..22)
-- [ ] Holmes review of the engine before any UI is built
+- [x] Yaniv/Assaf detection incl. exact-tie boundary (TEST-1..6)
+- [x] +30 penalty and catcher scoring (TEST-7, 8)
+- [x] Multiple-catcher tie-break incl. seat wrap (TEST-9..11)
+- [x] Halving: exact 100, no-cascade on 200/400, boundaries 99/101, toggle off, two players same round (TEST-12..13d)
+- [x] Elimination: exact-100 rescue, strict `>` boundary, simultaneous halving+elimination, last-player auto-end (TEST-14..16b)
+- [x] Successful-Yaniv count (TEST-17, 17b)
+- [x] Undo/edit replay: un-halve, Yaniv↔Assaf edit, reinstate eliminated player, idempotent recompute (TEST-18..18e)
+- [x] Input contract, threshold variants, invariants, 6-player table (TEST-19..22)
+- [x] Holmes review of the engine before any UI is built (review done; fixes applied by Turing)
 
 ---
 
