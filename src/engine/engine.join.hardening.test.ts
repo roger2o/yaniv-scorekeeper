@@ -13,7 +13,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { recompute } from './engine';
-import { EngineInputError, type GameSettings, type Player, type RoundEntry } from './types';
+import { type GameSettings, type Player, type RoundEntry } from './types';
 
 // --- Fixtures (mirror engine.join.test.ts conventions) -------------------
 
