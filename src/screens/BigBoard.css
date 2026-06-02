@@ -1,0 +1,253 @@
+/**
+ * Vertical scoresheet styling (BigBoard). Mobile-first at 375px.
+ *
+ * Primary motion is VERTICAL: rounds scroll down inside a max-height wrapper,
+ * with the header row (players) and the round column stuck in place. On a tight
+ * 375px table with up to 6 players, columns are narrow with tabular-nums; if
+ * the columns still overflow the wrapper scrolls horizontally too, while the
+ * header row and round column stay pinned (sticky on both axes).
+ *
+ * Only shared theme tokens are used (present in BOTH themes) so it skins
+ * cleanly on Felt & Chips and Party Arcade. Focus-visible rings, press
+ * feedback, hover-gating and reduced-motion all come from floor.css globally.
+ */
+
+.scoresheet__scroll {
+  /* Vertical scroll is the primary motion; horizontal only kicks in when the
+     columns genuinely overflow (many/long names at 375px). */
+  max-height: 60vh;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.scoresheet {
+  width: 100%;
+  border-collapse: separate; /* separate so sticky cells keep their borders */
+  border-spacing: 0;
+  color: var(--ink);
+}
+
+.scoresheet caption {
+  caption-side: top;
+  text-align: left;
+  font-weight: 800;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  padding: 10px 12px;
+}
+
+/* --- The left "Round" column: sticky horizontally so it stays in view ---- */
+.scoresheet__round-head,
+.scoresheet__round-cell {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  text-align: left;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border-strong);
+  padding: 10px 12px;
+  min-width: 116px;
+  vertical-align: top;
+}
+
+/* --- The header row (players): sticky vertically so it stays in view ----- */
+.scoresheet thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface-raised);
+  border-bottom: 2px solid var(--border-strong);
+}
+
+/* The top-left corner cell must sit above both sticky axes. */
+.scoresheet thead .scoresheet__round-head {
+  z-index: 4;
+}
+
+.scoresheet__player-head {
+  padding: 10px 8px;
+  /* Narrow columns for tight tables; tabular-nums keeps digits aligned. */
+  min-width: 56px;
+  max-width: 96px;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  vertical-align: bottom;
+  text-align: center;
+}
+
+.scoresheet__player-name {
+  display: block;
+  font-weight: 800;
+  font-size: 0.92rem;
+  line-height: 1.15;
+}
+
+/* Truncate long names in the header; full name is on the th title attribute. */
+.scoresheet__player-name-text {
+  display: inline-block;
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.scoresheet__head-tag {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.scoresheet__head-tag--out {
+  color: var(--danger-ink);
+  background: var(--danger);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+}
+
+/* Leader is INDICATED, never repositioned: a soft wash on the column header. */
+.scoresheet__player-head[data-leader='true'] {
+  background: var(--accent-soft);
+}
+
+.scoresheet__player-head[data-eliminated='true'] .scoresheet__player-name {
+  opacity: 0.6;
+}
+
+/* --- Round column contents ---------------------------------------------- */
+.scoresheet__round-no {
+  display: inline-block;
+  font-weight: 800;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.scoresheet__round-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  line-height: 1.2;
+}
+
+/* Assaf rounds get a glyph-led note already; reinforce with weight, not colour
+   alone (text already says "Assaf"). */
+.scoresheet__round-note[data-outcome='ASSAF'] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* --- Body cells: the running cumulative totals --------------------------- */
+.scoresheet__cell {
+  padding: 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.scoresheet__total {
+  display: block;
+  font-weight: 800;
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.scoresheet__cell--blank {
+  color: var(--ink-muted);
+  opacity: 0.55;
+}
+
+/* --- In-cell special-moment markers: glyph + text, never colour-alone ---- */
+.scoresheet__mark {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.1;
+  border-radius: var(--radius-pill);
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+.scoresheet__mark--assaf {
+  color: var(--danger-ink);
+  background: var(--danger);
+}
+
+.scoresheet__mark--halved {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+.scoresheet__mark--joined {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.scoresheet__mark--out {
+  color: var(--danger-ink);
+  background: var(--danger);
+}
+
+.scoresheet__mark--starts {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+.scoresheet__empty {
+  padding: 14px 12px;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- Emphasised current-totals (latest standings) footer row ------------- */
+.scoresheet__totals-row .scoresheet__round-cell,
+.scoresheet__cell--total {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--accent-soft);
+  border-top: 2px solid var(--border-strong);
+  border-bottom: none;
+}
+
+/* The totals row's round cell must also win on the horizontal sticky axis. */
+.scoresheet__totals-row .scoresheet__round-cell {
+  z-index: 3;
+  left: 0;
+}
+
+.scoresheet__totals-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.scoresheet__starts-next {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.scoresheet__cell--total .scoresheet__total {
+  font-size: 1.2rem;
+}
+
+.scoresheet__cell--total[data-eliminated='true'] .scoresheet__total {
+  opacity: 0.6;
+}
