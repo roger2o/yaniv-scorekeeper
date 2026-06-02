@@ -46,6 +46,10 @@ export interface HelpDialogProps {
 export function HelpDialog({ onClose }: HelpDialogProps) {
   const [active, setActive] = useState<TabId>('use');
   const [shareNote, setShareNote] = useState<string | null>(null);
+  // When BOTH Web Share and clipboard fail, we surface the URL as a real,
+  // selectable/long-pressable link (not raw text) so the OS copy/share
+  // affordances work. Null unless we're in that final fallback.
+  const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
 
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const titleId = useId();
@@ -80,6 +84,13 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
       if (e.key !== 'Tab') return;
       const root = dialogRef.current;
       if (!root) return;
+      // FOOTGUN (latent, intentional): `offsetParent !== null` is the cheap
+      // "is it visible" test, but it returns null for a `position: fixed`
+      // element EVEN WHEN VISIBLE. This dialog's focusables are all statically
+      // positioned, so it's correct today — but if a fixed-position control is
+      // ever added inside the dialog it would be silently excluded from the
+      // focus trap. Swap to a visibility check (e.g. getClientRects().length)
+      // if that happens.
       const focusable = Array.from(
         root.querySelectorAll<HTMLElement>(FOCUSABLE),
       ).filter((el) => el.offsetParent !== null || el === document.activeElement);
@@ -132,13 +143,15 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
     if (nav?.clipboard?.writeText) {
       try {
         await nav.clipboard.writeText(appUrl);
+        setShareFallbackUrl(null);
         setShareNote('Link copied — paste it to the next table.');
         return;
       } catch {
-        // Clipboard blocked — fall through to the visible link.
+        // Clipboard blocked — fall through to the visible, selectable link.
       }
     }
-    setShareNote('Copy this link to share: ' + appUrl);
+    setShareNote('Copy this link to share:');
+    setShareFallbackUrl(appUrl);
   };
 
   return (
@@ -167,7 +180,7 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
             <p className="help-dialog__intro">
               Two quick guides: <strong>How to Use</strong> this scorekeeper, and{' '}
               <strong>How to Play</strong> Yaniv itself. Open this any time — your
-              game keeps going in the background.
+              game is safe, nothing is lost.
             </p>
           </div>
           <button
@@ -238,6 +251,14 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
           {shareNote && (
             <p className="help-share__note" role="status" data-testid="help-share-note">
               {shareNote}
+              {shareFallbackUrl && (
+                <>
+                  {' '}
+                  <a className="help-share__link" href={shareFallbackUrl}>
+                    {shareFallbackUrl}
+                  </a>
+                </>
+              )}
             </p>
           )}
         </div>

@@ -13,7 +13,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(15, 20, 18, 0.55);
+  background: var(--scrim);
   padding: 0;
   /* Respect notches / safe areas. */
   padding-top: env(safe-area-inset-top);
@@ -71,8 +71,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-pill);
   background: var(--surface-raised);
   color: var(--ink);
@@ -90,7 +90,7 @@
 
 .help-tabs__tab {
   flex: 1;
-  min-height: 52px;
+  min-height: 56px;
   padding: 0 12px;
   border-radius: var(--radius) var(--radius) 0 0;
   background: var(--surface-raised);
@@ -194,5 +194,18 @@
   margin: 10px 0 0;
   font-size: 0.85rem;
   color: var(--ink);
+  word-break: break-all;
+}
+
+/* The visible-link fallback: a real, selectable/long-pressable anchor so the
+   OS copy/share affordances work (raw text in a <p> has none). Uses --ink (not
+   --accent) for the text colour: the brass accent on Theme A's felt surface is
+   only 4.12:1 (below the 4.5:1 AA floor), whereas --ink clears it comfortably in
+   both themes. The bold underline carries the "this is a link" affordance, so
+   colour is not the only cue. */
+.help-share__link {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
   word-break: break-all;
 }

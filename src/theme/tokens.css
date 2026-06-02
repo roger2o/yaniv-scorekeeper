@@ -29,6 +29,7 @@
  *   --border             card borders, dividers
  *   --border-strong      stronger dividers, focus context
  *   --focus-ring         focus-visible outline colour
+ *   --scrim              dimming backdrop behind modal dialogs
  *   --radius / --radius-lg / --radius-pill   corner radii
  *   --seat-1 .. --seat-6 per-seat identity colours (paired w/ name + shape,
  *                        never colour-alone)
@@ -59,6 +60,7 @@
   --border: #356351; /* felt border */
   --border-strong: #4d7a68;
   --focus-ring: #f4ecd8; /* ivory ring reads on the dark felt */
+  --scrim: rgba(15, 20, 18, 0.55); /* dark dimming backdrop behind modals */
 
   --radius: 12px;
   --radius-lg: 20px;
@@ -102,6 +104,7 @@
   --border: #e6ddcf;
   --border-strong: #d3c8b6;
   --focus-ring: #7c5ccb; /* grape ring reads on the light surface */
+  --scrim: rgba(35, 28, 24, 0.5); /* warm dark dimming backdrop behind modals */
 
   --radius: 16px; /* chunkier corners */
   --radius-lg: 26px;
