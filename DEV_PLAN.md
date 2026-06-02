@@ -78,48 +78,48 @@ Depends on Phases 1–3. A new player can join a game already in progress. Pure 
 ## Phase 5 — UI: Theme Layer & Two-View Shell
 The visual foundation every UI phase builds on. Approved design direction in `docs/ui-direction.md`.
 
-- [ ] Shared **tokenized theme layer** (colour, type, spacing, radius tokens — one layout, skin swaps only)
-- [ ] **Theme A "Felt & Chips"** and **Theme B "Party Arcade"** built on the token layer; both clear WCAG AA contrast + across-table legibility
-- [ ] **Theme toggle** as a persisted per-device preference (survives reload; defaults sensibly on first run)
-- [ ] **Two-view scaffold**: CIRCLE view (viewing — phone flat, players around a ring, scores oriented to each seat, scorekeeper upright at bottom) and TABLE/LIST view (entry — upright, scorekeeper-facing); one control flips between them
+- [x] Shared **tokenized theme layer** (colour, type, spacing, radius tokens — one layout, skin swaps only) — `src/theme/tokens.css` + `floor.css` + `app.css`
+- [x] **Theme A "Felt & Chips"** and **Theme B "Party Arcade"** built on the token layer; both clear WCAG AA contrast + across-table legibility
+- [x] **Theme toggle** as a persisted per-device preference (survives reload; defaults sensibly on first run) — `src/theme/ThemeProvider.tsx`, separate localStorage key from game data
+- [x] **Two-view scaffold**: CIRCLE view (viewing — phone flat, players around a ring, scores oriented to each seat, scorekeeper upright at bottom) and TABLE/LIST view (entry — upright, scorekeeper-facing); one control (＋ New Round) flips between them
 
 ---
 
 ## Phase 6 — UI: Setup Screen
-- [ ] Add 2–6+ players by name (no hard cap); fast add (auto-focus, Enter/＋ adds next)
-- [ ] Threshold as segmented control (7 default, 5, 11)
-- [ ] 100-halving toggle (on by default)
-- [ ] Optional knockout score behind an "Advanced" disclosure
+- [x] Add 2–6+ players by name (no hard cap); fast add (auto-focus, Enter/＋ adds next); ids generated INDEPENDENT of name (duplicate names can't collide)
+- [x] Threshold as segmented control (7 default, 5, 11)
+- [x] 100-halving toggle (on by default)
+- [x] Optional knockout score behind an "Advanced" disclosure
 
 ---
 
 ## Phase 7 — UI: Round Entry (the core loop)
 Depends on Phases 1–5. The TABLE/LIST entry view; this screen is the whole value proposition.
 
-- [ ] Custom fixed on-screen number pad (no native keyboard)
-- [ ] Tap who called "Yaniv!"; caller's hand value is a **required** input
-- [ ] Enter each player's hand total, auto-advance; blank vs explicit 0 visually distinct
-- [ ] Entry guards: above-threshold caller flag, implausible-total soft flag, "everyone entered?" gate
-- [ ] "Confirm round" review step showing the resolved outcome before commit
+- [x] Custom fixed on-screen number pad (no native keyboard) — `src/screens/NumberPad.tsx`
+- [x] Tap who called "Yaniv!"; caller's hand value is a **required** input (Review gated until it's in)
+- [x] Enter each player's hand total, auto-advance; blank vs explicit 0 visually distinct
+- [x] Entry guards: above-threshold caller flag, implausible-total soft flag, "everyone entered?" gate
+- [x] "Confirm round" review step showing the resolved outcome before commit (resolved via the same engine the commit uses)
 
 ---
 
 ## Phase 8 — UI: Standings, Callouts & History
 The CIRCLE viewing view plus history. Both views stay in static seating order.
 
-- [ ] Live standings in the **circle view**, **static seating order** (never reordered by score), each score oriented to its own seat, large `tabular-nums`
-- [ ] Leader **indicated** (crown/highlight) and "starts next round" marked by more than colour — glanceable across a table; the leader is **never repositioned** to the top
-- [ ] **Add-player-mid-game affordance** in the UI (adds a seat, shows the derived seed and a "no head start" note; wires to the Phase 4 engine join event)
-- [ ] Non-blocking `aria-live` callouts: Assaf, 100-halving, elimination, mid-game join
-- [ ] Round-by-round history log (caller, hands, outcome, points) — including join events
-- [ ] Undo last round — states exactly what it reverts, single confirmation, full recompute
+- [x] Live standings in the **circle view**, **static seating order** (never reordered by score), each score oriented to its own seat (snapped 0/90/180/270), large `tabular-nums`
+- [x] Leader **indicated** (crown) and "starts next round" marked by ring-glow + arrow + the words — glanceable across a table; the leader is **never repositioned** to the top
+- [x] **Add-player-mid-game affordance** in the UI (adds a seat, "no head start" note; wires to the engine join via the store's new `addPlayer` action)
+- [x] Non-blocking `aria-live` callouts: Assaf, 100-halving, elimination, mid-game join — `src/screens/Callouts.tsx`
+- [ ] Round-by-round history log (caller, hands, outcome, points) — including join events — *deferred: not in this build; the per-round log is a read-only detail panel, lower priority than the core loop. Flag for a follow-up phase.*
+- [x] Undo last round — states what it reverts, full recompute; plus a caught-and-shown recovery when an edit/undo strands a mid-game join (engine error never crashes)
 
 ---
 
 ## Phase 9 — UI: End Game & Stats
-- [ ] "End game" crowns the lowest cumulative score at any time
-- [ ] Auto-end + winner screen when one player remains (elimination)
-- [ ] End-of-game per-player successful-Yaniv count
+- [x] "End game" crowns the lowest cumulative score at any time
+- [x] Auto-end + winner screen when one player remains (elimination)
+- [x] End-of-game per-player successful-Yaniv count (number + stars); Theme B win confetti (reduced-motion-gated); New game / Rematch
 
 ---
 
@@ -158,8 +158,10 @@ Depends on Phase 10 + Phase 12.
 ---
 
 ## Current Focus
-**Phases 0–3 complete (Turing).** Scaffold + verified engine (Phases 0–2), application state layer, and crash-safe persistence (Phase 3) are in place under `src/state/`, with a thin app shell that switches setup → play → end via PLACEHOLDER screens under `src/screens/`. The store (Context + reducer) holds only the source-of-truth (settings + round-history + screen) and derives all displayed state via `recompute`. Persistence is versioned and fully try/catch-wrapped: storage failures degrade to a non-fatal warning, and missing/corrupt/incompatible saves start cleanly at setup. Full suite green: **203 tests**, clean TypeScript + Vite build. **No real UI was built** — screens are obviously provisional stubs to drive the flow only.
+**Phases 0–9 complete (Turing).** Engine + state + persistence (0–3), mid-game join engine (4), and the full themed two-view UI (5–9) are built against the approved design in `docs/ui-direction.md`. Real screens now exist under `src/screens/` (Setup, RoundEntry + NumberPad, PlayScreen with circle/big-board views + Callouts + BigBoard, EndGame + Confetti) on a tokenized two-theme layer under `src/theme/` (Felt & Chips / Party Arcade, persisted per-device toggle). The placeholder stubs are gone. Full suite green: **257 tests** (241 prior + 16 new component/interaction tests), clean `tsc -b` + production `vite build`.
 
-**In progress:** **Phase 4 — Mid-game Join (engine)** (Turing). Extending the model so the player set can grow mid-game, deriving the joiner's seed (highest active cumulative, no halving on seed), recording it as a replayable history event, and proving recompute idempotency — boxes stay unticked until Bugsy's tests pass and Holmes has reviewed.
+**Store contract extension (flagged):** the store now exposes `addPlayer(name)` (mid-game join — builds the Player with a name-independent id, next seat, and join marker) and `removePlayer(id)` (recovers from an edit/undo that strands a joiner). Also added a derived `engineError` so a recompute throw surfaces a plain message instead of a blank screen. Engine and persistence layers were NOT modified (one unused import removed from an engine *test* file — a pre-existing clean-build blocker, no logic change).
 
-**Next:** the themed two-view UI build — Phase 5 (theme layer + circle/table view shell), then Setup / Round entry / Standings / End game (Phases 6–9), all in static seating order against the approved design direction in `docs/ui-direction.md`.
+**Deferred from this build:** the round-by-round history log (Phase 8) — a read-only detail panel, lower priority than the core loop. PWA wiring (Phase 10), accessibility/legibility device pass (Phase 11), quality-gate/security sweep (Phase 12), and deploy (Phase 13) are unchanged and still ahead.
+
+**Next:** Twiggy UX review of the two themes + two views; Holmes code review of the UI diff + store extension; Bugsy functional tests on a device; then Phases 10–13.
