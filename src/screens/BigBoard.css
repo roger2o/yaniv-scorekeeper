@@ -197,24 +197,34 @@
   white-space: nowrap;
 }
 
+/* Outcome WORD labels — "Assaf" (red) and "Yaniv" (green). These are small,
+   colour-coded WORDS, not pills: the word carries the meaning and the colour
+   reinforces it (accessible, colour-blind-safe — never colour-alone). They
+   override the shared pill treatment (no background, no pill padding) and are
+   allowed to WRAP in the narrow phone column. Each colour token clears WCAG AA
+   (>=4.5:1 for small text) against the raised cell background in BOTH themes:
+     Assaf red   — Felt 4.73:1, Arcade 5.42:1
+     Yaniv green — Felt 5.26:1, Arcade 5.35:1
+   The full meaning (incl. the +30 penalty) rides the aria-label in the markup. */
+.scoresheet__mark--assaf,
+.scoresheet__mark--yaniv {
+  background: none;
+  padding: 0;
+  white-space: normal; /* "small letters" = small font; let it WRAP if needed */
+  overflow-wrap: anywhere;
+}
+
 .scoresheet__mark--assaf {
-  color: var(--danger-ink);
-  background: var(--danger);
+  color: var(--outcome-assaf-text);
+}
+
+.scoresheet__mark--yaniv {
+  color: var(--outcome-yaniv-text);
 }
 
 .scoresheet__mark--halved {
   color: var(--accent-ink);
   background: var(--accent);
-}
-
-/* Successful-Yaniv WINNER cue on the round's caller cell. The celebration gold
-   (--celebrate) is the app's "win" colour and is visually DISTINCT from the red
-   Assaf/out markers and the brass/grape accent markers (leader, halving, starts
-   next). Dark warm ink (--chip-text) on celebrate gold clears WCAG AA in BOTH
-   themes (Felt 9.5:1, Arcade 7.47:1). Glyph + text, never colour alone. */
-.scoresheet__mark--yaniv {
-  color: var(--chip-text);
-  background: var(--celebrate);
 }
 
 .scoresheet__mark--joined {

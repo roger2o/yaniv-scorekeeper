@@ -256,17 +256,19 @@ export function BigBoard({ game }: { game: GameState }) {
                           {total ?? '—'}
                         </span>
 
-                        {/* In-cell markers: glyph + text, never colour-alone.
-                            Copy is kept SHORT so it fits a ~56px column without
-                            clipping — the full word ("Assaf" / "joined") lives in
-                            the round-row note where there is room. An aria-label
-                            carries the full meaning for screen readers. */}
+                        {/* In-cell markers: the WORD carries the meaning, colour
+                            reinforces it (never colour-alone). The outcome words
+                            "Assaf" (red) and "Yaniv" (green) are small, colour-
+                            coded text labels; the full meaning — including the
+                            +30 penalty — rides the aria-label so it is never lost
+                            to assistive tech. Other markers stay glyph + short
+                            text, with the full wording in the round-row note. */}
                         {wasAssafCaller && (
                           <span
                             className="scoresheet__mark scoresheet__mark--assaf"
-                            aria-label="Assaf penalty plus 30"
+                            aria-label="Assaf — caught, plus 30 penalty"
                           >
-                            <span aria-hidden="true">＋</span>30
+                            Assaf
                           </span>
                         )}
                         {wasYanivWinner && (
@@ -274,7 +276,7 @@ export function BigBoard({ game }: { game: GameState }) {
                             className="scoresheet__mark scoresheet__mark--yaniv"
                             aria-label="Successful Yaniv — won the round"
                           >
-                            <span aria-hidden="true">★</span> Yaniv
+                            Yaniv
                           </span>
                         )}
                         {halving && (

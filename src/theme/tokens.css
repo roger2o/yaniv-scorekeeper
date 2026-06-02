@@ -57,6 +57,15 @@
   --danger: #b3382f; /* warm red (darkened so ivory-on-danger clears WCAG AA) */
   --danger-ink: #f4ecd8; /* ivory on red (~5.06:1, clears 4.5:1 AA) */
   --celebrate: #e7c14a; /* brighter gold burst */
+  /* Word-label outcome text colours used AS TEXT on the raised-felt cell
+     (--surface-raised #27604e), not as a pill. A saturated red/green can't
+     clear AA on the medium-dark felt, so these are a LIGHTER salmon-red and a
+     brighter mint-green chosen so the word stays legible (legibility wins over
+     exact hue). Both measured on #27604e:
+       --outcome-assaf-text  #ffc1b8  -> 4.73:1 (clears 4.5:1 AA small text)
+       --outcome-yaniv-text  #8cefb0  -> 5.26:1 (clears 4.5:1 AA small text) */
+  --outcome-assaf-text: #ffc1b8; /* light salmon-red — "Assaf" word on felt */
+  --outcome-yaniv-text: #8cefb0; /* bright mint-green — "Yaniv" word on felt */
   --border: #356351; /* felt border */
   --border-strong: #4d7a68;
   --focus-ring: #f4ecd8; /* ivory ring reads on the dark felt */
@@ -101,6 +110,13 @@
   --danger: #d23b2e; /* coral-red */
   --danger-ink: #fffdf8;
   --celebrate: #e8a317; /* sun-gold pop */
+  /* Word-label outcome text colours used AS TEXT on the raised-white cell
+     (--surface-raised #fffdf8), not as a pill. On the light surface a true
+     red and a true green both clear AA comfortably. Both measured on #fffdf8:
+       --outcome-assaf-text  #c1352a  -> 5.42:1 (clears 4.5:1 AA small text)
+       --outcome-yaniv-text  #0f7a37  -> 5.35:1 (clears 4.5:1 AA small text) */
+  --outcome-assaf-text: #c1352a; /* true red — "Assaf" word on light surface */
+  --outcome-yaniv-text: #0f7a37; /* true green — "Yaniv" word on light surface */
   --border: #e6ddcf;
   --border-strong: #d3c8b6;
   --focus-ring: #7c5ccb; /* grape ring reads on the light surface */

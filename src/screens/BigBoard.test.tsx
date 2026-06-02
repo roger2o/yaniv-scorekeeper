@@ -131,14 +131,17 @@ describe('BigBoard scoresheet — static seating order, leader indicated', () =>
 });
 
 describe('BigBoard scoresheet — special-moment markers', () => {
-  it('marks an Assaf on the caller (+30)', () => {
+  it('marks an Assaf on the caller with the word "Assaf" (red), +30 kept on the label', () => {
     // Ann calls but Bo ties/beats -> Assaf. Ann scores 5 + 30.
     const g = game(threePlayers(), [{ callerId: 'a', hands: { a: 5, b: 5, c: 9 } }]);
     expect(g.rounds[0]!.outcome).toBe('ASSAF');
     render(<BigBoard game={g} />);
-    // In-cell pill is shortened to "+30"; the full meaning is on the aria-label,
-    // and the word "Assaf" lives in the round-row note where there is room.
-    expect(screen.getByLabelText(/Assaf penalty plus 30/i)).toBeTruthy();
+    // The in-cell marker now shows the WORD "Assaf" (small, red); the full
+    // meaning — including the +30 penalty — rides the aria-label so it is never
+    // lost to assistive tech.
+    const assafMark = screen.getByLabelText(/Assaf — caught, plus 30 penalty/i);
+    expect(assafMark).toBeTruthy();
+    expect(assafMark.textContent).toMatch(/^Assaf$/);
     // The round note also says Assaf, and never "deal".
     expect(screen.getByText(/called — Assaf/i)).toBeTruthy();
   });
@@ -155,17 +158,20 @@ describe('BigBoard scoresheet — special-moment markers', () => {
     render(<BigBoard game={g} />);
     const rows = bodyRows();
 
-    // Round 1: the Yaniv winner marker sits on Ann's cell (glyph + "Yaniv"),
-    // with the full meaning on the aria-label. Ann is the FIRST player column.
+    // Round 1: the Yaniv winner marker sits on Ann's cell — the WORD "Yaniv"
+    // (small, green), with the full meaning on the aria-label. Ann is the FIRST
+    // player column.
     const r1AnnCell = within(rows[0]!).getAllByRole('cell')[0] as HTMLElement;
     expect(r1AnnCell.getAttribute('data-yaniv')).toBe('true');
-    expect(
-      within(r1AnnCell).getByLabelText(/successful yaniv — won the round/i),
-    ).toBeTruthy();
-    expect(within(r1AnnCell).getByText(/yaniv/i)).toBeTruthy();
+    const yanivMark = within(r1AnnCell).getByLabelText(
+      /successful yaniv — won the round/i,
+    );
+    expect(yanivMark).toBeTruthy();
+    expect(yanivMark.textContent).toMatch(/^Yaniv$/);
 
-    // Round 2 is an Assaf: it renders the Assaf marker, NOT the Yaniv one.
-    expect(within(rows[1]!).getByLabelText(/assaf penalty plus 30/i)).toBeTruthy();
+    // Round 2 is an Assaf: it renders the Assaf WORD marker, NOT the Yaniv one.
+    const r2Assaf = within(rows[1]!).getByLabelText(/assaf — caught, plus 30 penalty/i);
+    expect(r2Assaf.textContent).toMatch(/^Assaf$/);
     expect(
       within(rows[1]!).queryByLabelText(/successful yaniv/i),
     ).toBeNull();
