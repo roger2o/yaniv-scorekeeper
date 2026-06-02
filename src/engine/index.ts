@@ -5,6 +5,7 @@ export {
   type GameSettings,
   type GameState,
   type HalvingEvent,
+  type JoinEvent,
   type Player,
   type ResolvedRound,
   type RoundEntry,

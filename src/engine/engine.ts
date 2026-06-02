@@ -16,6 +16,7 @@ import {
   type GameSettings,
   type GameState,
   type HalvingEvent,
+  type JoinEvent,
   type Player,
   type ResolvedRound,
   type RoundEntry,
@@ -36,7 +37,7 @@ function assertValidHandValue(value: unknown, who: string): asserts value is num
   }
 }
 
-function validateSettings(settings: GameSettings): void {
+function validateSettings(settings: GameSettings, historyLength: number): void {
   const { players } = settings;
   if (players.length < 2) {
     throw new EngineInputError('A game needs at least 2 players.');
@@ -56,8 +57,32 @@ function validateSettings(settings: GameSettings): void {
     if (seats.has(p.seat)) {
       throw new EngineInputError(`Duplicate seat index: ${p.seat}`);
     }
+    // [MID-GAME JOIN] The join marker, when present, must be a non-negative
+    // integer and cannot point past the end of recorded history (you cannot
+    // join a game that has already finished playing — the join would never
+    // take effect on replay). Absent / 0 means an original player.
+    if (p.joinsBeforeRoundIndex !== undefined) {
+      const k = p.joinsBeforeRoundIndex;
+      if (typeof k !== 'number' || !Number.isInteger(k) || k < 0) {
+        throw new EngineInputError(
+          `joinsBeforeRoundIndex for player "${p.id}" must be a non-negative integer, got: ${String(k)}`,
+        );
+      }
+      if (k > historyLength) {
+        throw new EngineInputError(
+          `Player "${p.id}" joins before round ${k}, but only ${historyLength} round(s) exist; cannot join after the game's recorded history.`,
+        );
+      }
+    }
     ids.add(p.id);
     seats.add(p.seat);
+  }
+  // [MID-GAME JOIN] At least two players must be present from the start
+  // (join index 0); a game cannot begin with fewer than two and "fill up" via
+  // joins, because round 0 needs at least two active players to resolve.
+  const originalCount = players.filter((p) => (p.joinsBeforeRoundIndex ?? 0) === 0).length;
+  if (originalCount < 2) {
+    throw new EngineInputError('A game needs at least 2 players present from round 0.');
   }
   // [INVARIANT] Seats must be exactly {0, 1, …, players.length-1} — contiguous
   // and 0-based, in the order players were added. This guarantees the seat
@@ -142,28 +167,69 @@ function lowestThenClockwise(
  * @param settings Immutable game settings.
  */
 export function recompute(history: RoundEntry[], settings: GameSettings): GameState {
-  validateSettings(settings);
+  validateSettings(settings, history.length);
 
   const seatOrder = bySeat(settings.players);
   const nameOfId = new Map<string, string>();
+  const joinIndexOfId = new Map<string, number>();
   for (const p of seatOrder) {
     nameOfId.set(p.id, p.name);
+    joinIndexOfId.set(p.id, p.joinsBeforeRoundIndex ?? 0);
   }
 
   // Running state, rebuilt from scratch as we replay history.
   const totals = new Map<string, number>();
   const eliminated = new Set<string>();
   const successfulYaniv = new Map<string, number>();
+  // [MID-GAME JOIN] A player is only ACTIVE once they have JOINED. Original
+  // players (join index 0) are joined from the start; mid-game joiners are
+  // added to this set when the replay reaches their join round, at which point
+  // their seed is derived (never stored).
+  const joined = new Set<string>();
   for (const p of seatOrder) {
     totals.set(p.id, 0);
     successfulYaniv.set(p.id, 0);
+    if ((p.joinsBeforeRoundIndex ?? 0) === 0) joined.add(p.id);
   }
 
+  // Active = has joined AND not eliminated. Seat order preserved.
   const activeIds = (): string[] =>
-    seatOrder.map((p) => p.id).filter((id) => !eliminated.has(id));
+    seatOrder.map((p) => p.id).filter((id) => joined.has(id) && !eliminated.has(id));
+
+  /**
+   * [MID-GAME JOIN] Seed any players whose join index === `roundIndex` and who
+   * have not yet joined. The seed is the highest cumulative total among players
+   * already active (joined and not eliminated) at this exact moment — derived,
+   * never stored. The seed does NOT trigger 100-halving (RULE 2). Returns the
+   * join events for the round's resolved view. Joins are seeded in seat order
+   * so that, if several join at once, each later joiner can see earlier ones'
+   * (already-set) seeds when taking the max — they cannot raise the max above
+   * the active maximum since a seed never exceeds it.
+   */
+  const seedJoinsBefore = (roundIndex: number): JoinEvent[] => {
+    const events: JoinEvent[] = [];
+    for (const p of seatOrder) {
+      if (joined.has(p.id)) continue;
+      if (joinIndexOfId.get(p.id) !== roundIndex) continue;
+      // Max cumulative among currently-active players (excludes eliminated and
+      // not-yet-joined). There is always at least one active player here because
+      // a game starts with >= 2 original players and never fully empties before
+      // the game ends.
+      const active = activeIds();
+      let seed = 0;
+      for (const id of active) {
+        const t = totals.get(id)!;
+        if (t > seed) seed = t;
+      }
+      totals.set(p.id, seed); // RULE 2: no halving on the seed itself.
+      joined.add(p.id);
+      events.push({ playerId: p.id, seed });
+    }
+    return events;
+  };
 
   const rounds: ResolvedRound[] = [];
-  let startsNextId: string | null = seatOrder[0]?.id ?? null;
+  let startsNextId: string | null = activeIds()[0] ?? null;
   let gameOver = false;
 
   for (let i = 0; i < history.length; i++) {
@@ -172,6 +238,11 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
         `Round ${i} recorded after the game already ended (only one active player remained).`,
       );
     }
+
+    // [MID-GAME JOIN] Apply any joins taking effect before this round, seeding
+    // derived starting scores. Must happen before the round is resolved so the
+    // joiner is an active participant for round i onward.
+    const joins = seedJoinsBefore(i);
 
     const entry = history[i]!;
     const active = activeIds();
@@ -293,6 +364,7 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
       cumulativeAfter,
       halvings,
       eliminations,
+      joins,
       startsNextId: nextStarter,
       catcherIds,
     });
@@ -312,6 +384,19 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
         startsNextId = nextStarter;
       }
     }
+  }
+
+  // [MID-GAME JOIN] Seed any join taking effect AFTER the last recorded round
+  // (join index === history.length): the player has joined but no round has been
+  // played since. They must be seeded now so standings and active list are
+  // correct and they start the next round as a normal participant. RULE 6: a
+  // late join does NOT change who-starts-next, so startsNextId is left as-is.
+  let pendingJoins: JoinEvent[] = [];
+  if (seatOrder.some((p) => !joined.has(p.id) && joinIndexOfId.get(p.id) === history.length)) {
+    if (gameOver) {
+      throw new EngineInputError('Cannot join a game that has already ended.');
+    }
+    pendingJoins = seedJoinsBefore(history.length);
   }
 
   // --- Build standings (seat order) ---
@@ -339,6 +424,7 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     standings,
     startsNextId,
     activePlayerIds: remaining,
+    pendingJoins,
     gameOver,
     winnerId,
   };

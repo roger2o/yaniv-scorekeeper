@@ -27,8 +27,25 @@ export interface Player {
    * {0, 1, …, players.length-1} — contiguous, 0-based, non-negative integers,
    * no gaps and no duplicates. This guarantees a gap-free clockwise seat circle
    * for the multiple-catcher tie-break. Seats never change once the game starts.
+   * A mid-game joiner takes the NEXT free seat, so the contiguous set simply
+   * grows by one.
    */
   seat: number;
+  /**
+   * MID-GAME JOIN MARKER. The 0-based round index BEFORE which this player
+   * becomes active — i.e. the player first plays round `joinsBeforeRoundIndex`
+   * and is absent from every earlier round. Original players have this absent
+   * (or 0): they "joined before round 0". A value K with 0 < K <= history.length
+   * means the player joined into an in-progress game just before round K.
+   *
+   * SINGLE-SOURCE-OF-TRUTH: the joiner's SEED score (their starting cumulative
+   * total) is NEVER stored. It is DERIVED during replay — when the replay loop
+   * reaches round K, the joiner is seeded to the highest cumulative total among
+   * the players who are active (joined and not eliminated) at that exact moment.
+   * If an earlier round is later edited or undone, the seed re-derives correctly
+   * on the next recompute. The seeded total does NOT trigger 100-halving.
+   */
+  joinsBeforeRoundIndex?: number;
 }
 
 /** Immutable game settings chosen at setup. */
@@ -81,6 +98,18 @@ export interface EliminationEvent {
 }
 
 /**
+ * A mid-game join taking effect immediately BEFORE a given round. The `seed` is
+ * the derived starting cumulative total (highest among active players at the
+ * join moment); it is recorded here for callouts/tests but is NEVER persisted —
+ * it is recomputed from history on every `recompute`.
+ */
+export interface JoinEvent {
+  playerId: string;
+  /** Derived seed score = max cumulative among active players at join time. */
+  seed: number;
+}
+
+/**
  * Fully resolved view of a single round, derived from the RoundEntry plus the
  * running game state at that point. Part of the recomputed game state.
  */
@@ -101,6 +130,11 @@ export interface ResolvedRound {
   halvings: HalvingEvent[];
   /** Elimination events triggered by this round. */
   eliminations: EliminationEvent[];
+  /**
+   * Players who JOINED the game immediately before this round (active from this
+   * round onward), with their derived seed score. Empty for rounds with no join.
+   */
+  joins: JoinEvent[];
   /** Player id who starts the NEXT round (caller on Yaniv, catcher on Assaf). */
   startsNextId: string;
   /**
@@ -136,8 +170,19 @@ export interface GameState {
    * game has ended.
    */
   startsNextId: string | null;
-  /** Ids of players still active (not eliminated), in seat order. */
+  /**
+   * Ids of players still active — JOINED and not eliminated — in seat order.
+   * A mid-game joiner whose join point has not yet been reached on replay is
+   * NOT active and does not appear here.
+   */
   activePlayerIds: string[];
+  /**
+   * [MID-GAME JOIN] Players who joined immediately AFTER the last recorded round
+   * (active, seeded, but have not yet played a round), with their derived seed.
+   * Empty in the common case. Joins that fall before a recorded round are
+   * reported on that round's `joins` instead.
+   */
+  pendingJoins: JoinEvent[];
   /** True once the game has auto-ended (one active player remains). */
   gameOver: boolean;
   /** Winner player id when the game is over (lowest total / sole survivor). */
