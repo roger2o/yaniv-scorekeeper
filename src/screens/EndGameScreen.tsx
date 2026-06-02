@@ -36,15 +36,33 @@ export function EndGameScreen() {
     );
   }
 
-  // Lowest cumulative total wins; the engine's winnerId wins if it auto-ended.
+  // Winner selection must MATCH the live leader shown on the Play/Big-board
+  // screens (PlayScreen.leaderIdOf / BigBoard): lowest cumulative total among
+  // NON-eliminated players, ties broken by seat order (first minimum — standings
+  // are in seat order, so the first row to hit the minimum wins the tie). If the
+  // engine auto-ended (sole survivor / everyone else knocked out) its winnerId is
+  // authoritative. If somehow everyone is eliminated, fall back to the overall
+  // lowest total so the screen always names a winner.
+  const liveLeaderId = (() => {
+    const contenders = game.standings.filter((s) => !s.eliminated);
+    const pool = contenders.length > 0 ? contenders : game.standings;
+    if (pool.length === 0) return null;
+    return pool.reduce((best, s) => (s.total < best.total ? s : best)).playerId;
+  })();
+  const winnerId = game.winnerId ?? liveLeaderId;
+  const winner = game.standings.find((s) => s.playerId === winnerId) ?? null;
+
+  // Final standings table is sorted lowest-first (a result screen, not the live
+  // scoreboard — reordering is fine here).
   const sorted = [...game.standings].sort((a, b) => a.total - b.total);
-  const winnerId = game.winnerId ?? sorted[0]?.playerId ?? null;
-  const winner = sorted.find((s) => s.playerId === winnerId) ?? sorted[0] ?? null;
 
   // The per-game stat: who called the most successful Yanivs.
-  const mostYaniv = [...game.standings].sort(
-    (a, b) => b.successfulYanivCount - a.successfulYanivCount,
-  )[0];
+  const mostYaniv =
+    game.standings.length > 0
+      ? [...game.standings].sort(
+          (a, b) => b.successfulYanivCount - a.successfulYanivCount,
+        )[0]
+      : null;
 
   const rematch = () => {
     if (state.settings === null) return;
