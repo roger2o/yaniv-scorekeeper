@@ -237,10 +237,13 @@ function RingView({
               </span>{' '}
               {row.name}
               {isLeader && (
-                <span aria-label="leader" title="leader">
+                <>
                   {' '}
-                  👑
-                </span>
+                  <span aria-hidden="true" title="leader">
+                    👑
+                  </span>
+                  <span className="sr-only">leader</span>
+                </>
               )}
             </span>
             <span className="chip__score tabular">{row.total}</span>

@@ -46,9 +46,9 @@ export function BigBoard({ game }: { game: GameState }) {
                 </span>{' '}
                 {row.name}
                 {isLeader && (
-                  <span className="board__tag" aria-label="leader">
+                  <span className="board__tag">
                     {' '}
-                    👑 leader
+                    <span aria-hidden="true">👑</span> leader
                   </span>
                 )}
                 {startsNext && !game.gameOver && (
