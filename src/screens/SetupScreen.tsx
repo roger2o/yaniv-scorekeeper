@@ -15,6 +15,7 @@ import { useStore } from '../state';
 import type { GameSettings, Threshold } from '../engine';
 import { makePlayerId, seatColorVar, seatShape } from './seat';
 import { ThemeToggle } from '../theme';
+import { HelpButton } from './HelpButton';
 import './SetupScreen.css';
 
 interface DraftPlayer {
@@ -93,7 +94,10 @@ export function SetupScreen() {
           </span>
           YANIV
         </span>
-        <ThemeToggle />
+        <div className="top-bar__controls">
+          <HelpButton />
+          <ThemeToggle />
+        </div>
       </div>
 
       {storageWarning?.kind === 'corrupt-discarded' && (

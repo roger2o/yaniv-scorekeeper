@@ -1,0 +1,21 @@
+/*
+ * "?" Help entry-point button. A round, clearly-tappable control that meets the
+ * 56px touch-target floor and sits in the top bar of the Play and Setup screens.
+ * Token-driven so it skins correctly in both themes. Press feedback, focus ring,
+ * and hover-gating all inherit from floor.css.
+ */
+.help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--ink);
+  border: 2px solid var(--border-strong);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.5rem;
+  line-height: 1;
+}

@@ -39,6 +39,13 @@
   font-size: 1.4rem;
 }
 
+/* Right-hand cluster of top-bar controls (Help "?" + theme toggle). */
+.top-bar__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* --- Primary / secondary buttons ----------------------------------------- */
 .btn {
   display: inline-flex;

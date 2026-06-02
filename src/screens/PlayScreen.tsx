@@ -20,6 +20,7 @@ import { useState } from 'react';
 import { useStore } from '../state';
 import type { GameState } from '../engine';
 import { ThemeToggle } from '../theme';
+import { HelpButton } from './HelpButton';
 import { RoundEntry } from './RoundEntry';
 import { Callouts } from './Callouts';
 import { BigBoard } from './BigBoard';
@@ -105,7 +106,10 @@ export function PlayScreen() {
           </span>
           YANIV
         </span>
-        <ThemeToggle />
+        <div className="top-bar__controls">
+          <HelpButton />
+          <ThemeToggle />
+        </div>
       </div>
 
       {useBoard ? (

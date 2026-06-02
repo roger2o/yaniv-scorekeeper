@@ -1,0 +1,198 @@
+/*
+ * Help dialog — full-height modal sheet on a dimmed backdrop. Token-driven so it
+ * skins correctly in both themes (Felt & Chips / Party Arcade). All press
+ * feedback, focus rings, hover-gating, and reduced-motion handling inherit from
+ * floor.css. The dialog scrolls internally so long guides stay reachable on a
+ * phone.
+ */
+
+.help-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(15, 20, 18, 0.55);
+  padding: 0;
+  /* Respect notches / safe areas. */
+  padding-top: env(safe-area-inset-top);
+}
+
+.help-dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+@media (min-width: 540px) {
+  .help-backdrop {
+    align-items: center;
+    padding: 16px;
+  }
+  .help-dialog {
+    max-height: calc(100% - 32px);
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* --- Head: title + intro + close ----------------------------------------- */
+.help-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.help-dialog__title {
+  font-size: 1.4rem;
+  color: var(--ink);
+}
+
+.help-dialog__intro {
+  margin: 6px 0 8px;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.help-dialog__close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--ink);
+  border: 2px solid var(--border);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+/* --- Tabs ----------------------------------------------------------------- */
+.help-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+
+.help-tabs__tab {
+  flex: 1;
+  min-height: 52px;
+  padding: 0 12px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface-raised);
+  color: var(--ink-muted);
+  border: 2px solid var(--border);
+  border-bottom: none;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.help-tabs__tab[data-selected='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+/* --- Body: scrollable content panel -------------------------------------- */
+.help-dialog__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* --- Prose styling (shared by both content blocks) ----------------------- */
+.help-prose h3 {
+  font-size: 1.1rem;
+  color: var(--ink);
+  margin: 18px 0 6px;
+}
+
+.help-prose section:first-child h3 {
+  margin-top: 0;
+}
+
+.help-prose p {
+  margin: 8px 0;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.help-prose ul,
+.help-prose ol {
+  margin: 8px 0;
+  padding-left: 22px;
+  line-height: 1.5;
+}
+
+.help-prose li {
+  margin: 6px 0;
+}
+
+.help-prose strong {
+  font-weight: 800;
+}
+
+/* Worked example / emphasis block. */
+.help-callout {
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+/* Card-values table inside How to Play. */
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.help-table th,
+.help-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+}
+
+.help-table__num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* --- Foot: share ---------------------------------------------------------- */
+.help-dialog__foot {
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.help-share__line {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.help-share__note {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--ink);
+  word-break: break-all;
+}
