@@ -196,7 +196,6 @@ export function BigBoard({ game }: { game: GameState }) {
             </tr>
           ) : (
             game.rounds.map((round) => {
-              const halvedThisRound = new Set(round.halvings.map((h) => h.playerId));
               const eliminatedThisRound = new Set(
                 round.eliminations.map((e) => e.playerId),
               );
@@ -246,62 +245,74 @@ export function BigBoard({ game }: { game: GameState }) {
                       <td
                         key={p.playerId}
                         className="scoresheet__cell num"
-                        data-assaf={wasAssafCaller}
+                        // data-yaniv is asserted by the BigBoard tests to verify
+                        // the Yaniv-winner marker lands only on the caller's cell.
+                        // The other special-moment flags were unreferenced noise
+                        // (no test or CSS read them) and were removed.
                         data-yaniv={wasYanivWinner}
-                        data-halved={halvedThisRound.has(p.playerId)}
-                        data-eliminated={eliminatedThisRound.has(p.playerId)}
-                        data-joined={justJoined}
                       >
                         <span className="scoresheet__total tabular">
                           {total ?? '—'}
                         </span>
 
-                        {/* In-cell markers: the WORD carries the meaning, colour
-                            reinforces it (never colour-alone). The outcome words
-                            "Assaf" (red) and "Yaniv" (green) are small, colour-
-                            coded text labels; the full meaning — including the
-                            +30 penalty — rides the aria-label so it is never lost
-                            to assistive tech. Other markers stay glyph + short
-                            text, with the full wording in the round-row note. */}
-                        {wasAssafCaller && (
-                          <span
-                            className="scoresheet__mark scoresheet__mark--assaf"
-                            aria-label="Assaf — caught, plus 30 penalty"
-                          >
-                            Assaf
-                          </span>
-                        )}
-                        {wasYanivWinner && (
-                          <span
-                            className="scoresheet__mark scoresheet__mark--yaniv"
-                            aria-label="Successful Yaniv — won the round"
-                          >
-                            Yaniv
-                          </span>
-                        )}
-                        {halving && (
-                          <span
-                            className="scoresheet__mark scoresheet__mark--halved"
-                            aria-label={`Halved from ${halving.from} to ${halving.to}`}
-                          >
-                            <span aria-hidden="true">↓</span> {halving.from}→
-                            {halving.to}
-                          </span>
-                        )}
-                        {justJoined && (
-                          <span
-                            className="scoresheet__mark scoresheet__mark--joined"
-                            aria-label={`Joined the game, seeded at ${seedById.get(p.playerId) ?? total}`}
-                          >
-                            <span aria-hidden="true">＋</span> join{' '}
-                            {seedById.get(p.playerId) ?? total}
-                          </span>
-                        )}
-                        {eliminatedThisRound.has(p.playerId) && (
-                          <span className="scoresheet__mark scoresheet__mark--out">
-                            <span aria-hidden="true">✕</span> out
-                          </span>
-                        )}
+                        {/* In-cell markers, COMPACT. Realistic worst cases stack
+                            several markers in ONE cell for ONE player in ONE round
+                            (e.g. a Yaniv winner who also lands on an exact 100 =
+                            "Yaniv" + "100→50"; an Assaf caller who halves; join +
+                            out). To stop a multi-marker cell blowing out the row
+                            height in a 56px column, the markers flow INLINE and
+                            WRAP inside this container (not one block per line) and
+                            use a tightened size/line-height. All markers stay
+                            present — none is dropped; they all matter.
+
+                            The WORD carries the meaning, colour reinforces it
+                            (never colour-alone). The outcome words "Assaf" (red)
+                            and "Yaniv" (green) are small colour-coded text labels;
+                            the full meaning — including the +30 penalty — rides the
+                            aria-label so it is never lost to assistive tech. The
+                            other markers stay glyph + short text, with the full
+                            wording in the round-row note. */}
+                        <span className="scoresheet__marks">
+                          {wasAssafCaller && (
+                            <span
+                              className="scoresheet__mark scoresheet__mark--assaf"
+                              aria-label="Assaf — caught, plus 30 penalty"
+                            >
+                              Assaf
+                            </span>
+                          )}
+                          {wasYanivWinner && (
+                            <span
+                              className="scoresheet__mark scoresheet__mark--yaniv"
+                              aria-label="Successful Yaniv — won the round"
+                            >
+                              Yaniv
+                            </span>
+                          )}
+                          {halving && (
+                            <span
+                              className="scoresheet__mark scoresheet__mark--halved"
+                              aria-label={`Halved from ${halving.from} to ${halving.to}`}
+                            >
+                              <span aria-hidden="true">↓</span> {halving.from}→
+                              {halving.to}
+                            </span>
+                          )}
+                          {justJoined && (
+                            <span
+                              className="scoresheet__mark scoresheet__mark--joined"
+                              aria-label={`Joined the game, seeded at ${seedById.get(p.playerId) ?? total}`}
+                            >
+                              <span aria-hidden="true">＋</span> join{' '}
+                              {seedById.get(p.playerId) ?? total}
+                            </span>
+                          )}
+                          {eliminatedThisRound.has(p.playerId) && (
+                            <span className="scoresheet__mark scoresheet__mark--out">
+                              <span aria-hidden="true">✕</span> out
+                            </span>
+                          )}
+                        </span>
                       </td>
                     );
                   })}

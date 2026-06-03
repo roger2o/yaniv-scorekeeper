@@ -186,12 +186,27 @@
 }
 
 /* --- In-cell special-moment markers: glyph + text, never colour-alone ---- */
+
+/* COMPACT marker stack. A single cell can legitimately carry several markers in
+   one round (e.g. "Yaniv" + "100→50"; "Assaf" + "100→50"; join + out). Rather
+   than one block per line — which blows out the row height in a 56px column —
+   the markers flow inline and WRAP, sitting side by side until the column runs
+   out of room. This caps the vertical footprint of a multi-marker cell. */
+.scoresheet__marks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 1px 5px; /* tight row gap, small column gap between adjacent markers */
+  margin-top: 2px;
+}
+
 .scoresheet__mark {
-  display: block;
-  margin-top: 3px;
-  font-size: 0.66rem;
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 0.64rem;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.05;
   border-radius: var(--radius-pill);
   padding: 1px 5px;
   white-space: nowrap;

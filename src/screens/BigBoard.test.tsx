@@ -315,3 +315,43 @@ describe('BigBoard scoresheet — terminology', () => {
     expect(container.textContent ?? '').not.toMatch(/deal(er|ing)?/i);
   });
 });
+
+describe('BigBoard scoresheet — compact multi-marker cell', () => {
+  it('stacks Assaf + 100-halving in ONE cell inside the wrapping marker row', () => {
+    // Worst realistic single-cell stack: a caller who is CAUGHT (Assaf, +30)
+    // AND lands on exactly 100 the same round (halves to 50). Both markers must
+    // be PRESENT (none dropped) and flow inside the single .scoresheet__marks
+    // wrapper so they wrap side-by-side rather than stacking one-per-line.
+    //
+    // Bo to 100: R1 Ann Yaniv -> Bo +12 = 12. R2 Bo calls but ties Ann (Assaf)
+    // -> Bo scores 58 + 30 = 88, total 12 + 88 = 100 -> halves to 50.
+    const g = game(threePlayers(), [
+      { callerId: 'a', hands: { a: 0, b: 12, c: 9 } },
+      { callerId: 'b', hands: { a: 58, b: 58, c: 60 } },
+    ]);
+    expect(g.rounds[1]!.outcome).toBe('ASSAF');
+    expect(g.rounds[1]!.callerId).toBe('b');
+    expect(g.rounds[1]!.halvings.find((h) => h.playerId === 'b')).toMatchObject({
+      from: 100,
+      to: 50,
+    });
+
+    render(<BigBoard game={g} />);
+    const rows = bodyRows();
+    // Bo is the SECOND player column; round 2 is the second body row.
+    const boCell = within(rows[1]!).getAllByRole('cell')[1] as HTMLElement;
+
+    // Both markers are present in the cell.
+    const assafMark = within(boCell).getByLabelText(/assaf — caught, plus 30 penalty/i);
+    const halvingMark = within(boCell).getByLabelText(/halved from 100 to 50/i);
+    expect(assafMark).toBeTruthy();
+    expect(halvingMark).toBeTruthy();
+
+    // Both live inside the single compact wrapping marker row (so they flow
+    // inline and wrap, not one block-line each).
+    const marks = boCell.querySelector('.scoresheet__marks')!;
+    expect(marks).toBeTruthy();
+    expect(marks.contains(assafMark)).toBe(true);
+    expect(marks.contains(halvingMark)).toBe(true);
+  });
+});

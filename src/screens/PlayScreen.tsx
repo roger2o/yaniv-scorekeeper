@@ -252,7 +252,7 @@ function RingView({
             </span>
             <span className="chip__score tabular">{row.total}</span>
             {startsNext && (
-              <span className="chip__starts-next" aria-hidden="false">
+              <span className="chip__starts-next">
                 <span aria-hidden="true">▲</span> STARTS NEXT
               </span>
             )}
