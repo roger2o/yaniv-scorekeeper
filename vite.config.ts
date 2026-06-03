@@ -47,7 +47,7 @@ export default defineConfig({
       workbox: {
         // Precache the FULL app shell so first-load-then-offline is reliable.
         // Covers html/js/css/icons/manifest/fonts in the dist output.
-        globPatterns: ['**/*.{html,js,css,png,svg,ico,woff2,webmanifest}'],
+        globPatterns: ['**/*.{html,js,css,png,svg,woff2,webmanifest}'],
         // Serve the HTML shell NetworkFirst (revalidated), not cache-first, so a
         // new hashed bundle is discovered on the next online load; offline falls
         // back to the precached index so a fully-offline launch still works.
@@ -60,6 +60,10 @@ export default defineConfig({
               cacheName: 'html-shell',
               networkTimeoutSeconds: 3,
               expiration: { maxEntries: 4 },
+              // Only ever cache a successful shell response. A transient 4xx/5xx
+              // navigation must NOT be cached and then served offline — the one
+              // guarantee that matters is that the shell always loads offline.
+              cacheableResponse: { statuses: [200] },
             },
           },
         ],
