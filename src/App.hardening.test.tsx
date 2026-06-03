@@ -21,14 +21,25 @@
  */
 
 import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
 import { STORAGE_KEY, SCHEMA_VERSION } from './state/persistence';
 import { THEME_STORAGE_KEY } from './theme/ThemeProvider';
+import { LANDING_DISMISSED_KEY } from './landing';
+
+// These tests exercise the IN-APP flow (restore/crash-safety), not the landing.
+// In jsdom there is no standalone display-mode signal, so the landing gate
+// would otherwise show the landing first. Pre-set the "start in browser"
+// dismissal so each render lands straight in the app — the landing gate itself
+// is covered by LandingPage.test.tsx.
+beforeEach(() => {
+  window.sessionStorage.setItem(LANDING_DISMISSED_KEY, '1');
+});
 
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   document.documentElement.removeAttribute('data-theme');
 });
 

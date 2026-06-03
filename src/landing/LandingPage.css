@@ -1,0 +1,149 @@
+/*
+ * Landing page — the pre-install browser view. Token-driven so it skins in both
+ * themes; mobile-first at 375px. Press feedback, focus rings, hover-gating and
+ * reduced-motion are inherited from floor.css; primary actions use the shared
+ * .btn (>=56px tap target). The two guides reuse .help-prose etc. from the
+ * shared prose stylesheet, imported below so the landing looks identical to the
+ * in-app Help without re-typing prose or duplicating styles.
+ */
+
+@import '../content/helpProse.css';
+
+/* The landing scrolls as a normal document page (unlike the in-app screens,
+   which fit a single viewport). Give it room to breathe and let it grow. */
+.landing {
+  padding-bottom: 32px;
+  gap: 8px;
+}
+
+/* --- Hero ----------------------------------------------------------------- */
+.landing__hero {
+  text-align: center;
+  padding: 16px 0 8px;
+}
+
+.landing__hero-title {
+  font-size: 2rem;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+  margin-bottom: 10px;
+}
+
+.landing__hero-line {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0 auto 18px;
+  max-width: 34ch;
+}
+
+.landing__cta {
+  margin: 4px 0 6px;
+}
+
+.landing__cta-note {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.landing__cta--foot {
+  margin-top: 20px;
+}
+
+/* --- Generic section ------------------------------------------------------ */
+.landing__section {
+  margin-top: 18px;
+}
+
+/* Sections rendered as a card get a touch more inner room. */
+.landing__section.card {
+  padding: 18px 16px;
+}
+
+.landing__h2 {
+  font-size: 1.3rem;
+  color: var(--ink);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.landing__lead {
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+/* --- Why install benefits ------------------------------------------------- */
+.landing__benefits {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.landing__benefits li {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.landing__tip {
+  margin: 12px 0 0;
+  font-size: 0.95rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+/* --- Install steps -------------------------------------------------------- */
+.landing__steps {
+  margin: 0;
+  padding-left: 22px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.landing__steps li {
+  margin: 8px 0;
+}
+
+/* The iOS Safari gotcha — a prominent, accent-washed note so it can't be
+   missed. Colour is reinforced by the word "Important" + bold text, never
+   colour-alone. */
+.landing__callout {
+  background: var(--accent-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin: 0 0 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* --- Footer --------------------------------------------------------------- */
+.landing__footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.landing__footer p {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* A little more comfortable on wider screens. */
+@media (min-width: 540px) {
+  .landing__hero-title {
+    font-size: 2.4rem;
+  }
+}

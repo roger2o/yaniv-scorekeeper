@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { HowToUse } from '../content/helpContent';
 import { HowToPlay } from '../content/helpContent';
+import '../content/helpProse.css';
 import './HelpDialog.css';
 
 type TabId = 'use' | 'play';

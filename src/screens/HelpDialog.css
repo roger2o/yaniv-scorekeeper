@@ -118,65 +118,10 @@
   border-top: 1px solid var(--border);
 }
 
-/* --- Prose styling (shared by both content blocks) ----------------------- */
-.help-prose h3 {
-  font-size: 1.1rem;
-  color: var(--ink);
-  margin: 18px 0 6px;
-}
-
-.help-prose section:first-child h3 {
-  margin-top: 0;
-}
-
-.help-prose p {
-  margin: 8px 0;
-  line-height: 1.5;
-  color: var(--ink);
-}
-
-.help-prose ul,
-.help-prose ol {
-  margin: 8px 0;
-  padding-left: 22px;
-  line-height: 1.5;
-}
-
-.help-prose li {
-  margin: 6px 0;
-}
-
-.help-prose strong {
-  font-weight: 800;
-}
-
-/* Worked example / emphasis block. */
-.help-callout {
-  background: var(--accent-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px 14px;
-}
-
-/* Card-values table inside How to Play. */
-.help-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 8px 0;
-}
-
-.help-table th,
-.help-table td {
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  color: var(--ink);
-}
-
-.help-table__num {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
-}
+/* Prose styling for the two shared guides (.help-prose / .help-table /
+   .help-callout) now lives in ../content/helpProse.css, imported by BOTH the
+   in-app Help dialog and the landing page so the guides look identical in
+   either surface and the rules are never duplicated. */
 
 /* --- Foot: share ---------------------------------------------------------- */
 .help-dialog__foot {
