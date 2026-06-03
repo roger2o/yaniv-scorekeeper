@@ -1,0 +1,87 @@
+# Netlify configuration for the Yaniv Scorekeeper.
+#
+# This is a pure client-side, offline-first PWA: no backend, no API, no
+# environment variables, no secrets. Netlify's only jobs here are to (1) build
+# the static bundle, (2) serve it over HTTPS (which the service worker and
+# home-screen install both require), and (3) set cache headers that keep the
+# auto-update story honest.
+#
+# The cache strategy is the load-bearing part. The app is installed to phones
+# that are often offline and can't be hand-patched, so a future scoring-bug fix
+# has to be able to actually reach them. That only works if the entry files
+# (index.html and the service worker) are ALWAYS revalidated, while the
+# content-hashed assets can be cached forever.
+
+[build]
+  # Vite outputs the static site (incl. the generated service worker + manifest)
+  # into dist/. tsc -b runs first as a type-check gate, then vite build.
+  command = "npm run build"
+  publish = "dist"
+
+# --- SPA fallback -----------------------------------------------------------
+# Single-page app: every navigation must resolve to index.html so deep links
+# and refreshes don't 404. The service worker also fronts navigations
+# (NetworkFirst), but this is the server-side safety net.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# --- Cache headers ----------------------------------------------------------
+
+# index.html — the app shell entry. NEVER cache aggressively. The browser must
+# re-check it every load so a new build (with new hashed asset names) is picked
+# up promptly online. The service worker serves it NetworkFirst on top of this.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Service worker — MUST always revalidate. If sw.js is cached, devices keep
+# running the old worker and the silent auto-update guarantee breaks. This is
+# the single most important header in the file.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Workbox runtime helper (also content-hashed by Vite, but belt-and-braces:
+# revalidate so a worker rebuild is never served stale).
+[[headers]]
+  for = "/workbox-*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Web app manifest — revalidate so a change to the app name, colours, or icon
+# set propagates to installed devices on the next online load.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Type = "application/manifest+json"
+
+# Hashed build assets — JS and CSS Vite emits with a content hash in the
+# filename (assets/index-XXXX.js). The filename changes whenever the content
+# does, so these are safe to cache forever and immutable.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Self-hosted fonts — stable filenames, content essentially never changes; if
+# it ever does we'd rename. Cache for a year (immutable) so the display faces
+# load instantly on repeat visits.
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# --- Baseline security headers ----------------------------------------------
+# No accounts, no network calls, no third-party origins — minimal attack
+# surface — but these are cheap, standard hardening for a public static site.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
