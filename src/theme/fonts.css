@@ -1,0 +1,40 @@
+/*
+ * Self-hosted display fonts — loaded LOCALLY so they work fully offline.
+ *
+ * Why local, not a Google Fonts CDN <link>: this app is offline-first and is
+ * installed to the home screen. A CDN font link silently fails with no
+ * connection, dropping the UI back to the system sans with no warning. These
+ * two files live in /public/fonts, are bundled into dist, and are precached by
+ * the service worker (see vite.config.ts globPatterns), so the display faces
+ * render the same online and offline.
+ *
+ * Both are VARIABLE fonts (a single file spans the weight axis), so one file
+ * per family covers every weight the UI uses — hence the `font-weight` RANGE in
+ * each rule. Latin subset only, to keep the offline payload tiny (~72 KB total).
+ *
+ * `font-display: swap` — show the system fallback immediately and swap in the
+ * display face when it's ready, so first paint is never blocked. The token
+ * stacks (--font-display) already name a sensible system fallback.
+ */
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 400 800; /* variable weight axis; UI uses 400/700/800 */
+  font-display: swap;
+  src: url('/fonts/nunito-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Baloo 2';
+  font-style: normal;
+  font-weight: 500 700; /* variable weight axis; UI uses 500/700 */
+  font-display: swap;
+  src: url('/fonts/baloo2-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}

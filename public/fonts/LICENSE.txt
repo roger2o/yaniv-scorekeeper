@@ -1,0 +1,23 @@
+Self-hosted display fonts for the Yaniv Scorekeeper PWA
+=======================================================
+
+These two font files are bundled locally so the app's display typefaces work
+fully offline (a Google Fonts CDN link silently fails with no connection, which
+would break the offline-first goal). They are precached by the service worker.
+
+Both are licensed under the SIL Open Font License, Version 1.1, which permits
+bundling and self-hosting in an application:
+
+  nunito-latin.woff2  — Nunito, by Vernon Adams / The Nunito Project.
+                        OFL 1.1. https://fonts.google.com/specimen/Nunito
+                        Variable font (weight axis); we use 400/700/800.
+
+  baloo2-latin.woff2  — Baloo 2, by Ek Type.
+                        OFL 1.1. https://fonts.google.com/specimen/Baloo+2
+                        Variable font (weight axis); we use 500/700.
+
+Each is the LATIN subset only (unicode-range U+0000–00FF + Latin punctuation),
+to keep the offline bundle small. The app chrome is English; free-typed player
+names fall back to the system sans for any non-Latin glyphs, which is fine.
+
+Full OFL text: https://openfontlicense.org/
