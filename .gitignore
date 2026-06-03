@@ -28,3 +28,6 @@ coverage
 
 # Windows / WSL stray files
 *:Zone.Identifier
+
+# Local Netlify folder
+.netlify
