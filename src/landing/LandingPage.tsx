@@ -29,6 +29,7 @@
 
 import { HowToUse, HowToPlay } from '../content/helpContent';
 import { ThemeToggle } from '../theme';
+import { isIosNonSafari } from './installState';
 import './LandingPage.css';
 
 export interface LandingPageProps {
@@ -37,9 +38,20 @@ export interface LandingPageProps {
 }
 
 export function LandingPage({ onStart }: LandingPageProps) {
+  // Best-effort: is this visitor on an iPhone/iPad in a browser that CANNOT
+  // install (anything but Safari)? Computed once at mount. Conservative — false
+  // on any uncertainty, so we never mis-warn a desktop/Android/Safari visitor.
+  const iosNonSafari = isIosNonSafari();
+
   return (
     <div className="app-frame landing">
-      <header className="top-bar">
+      {/* Skip link — first focusable element; lets keyboard/SR users jump past
+          the top bar straight to the main content of this long page. */}
+      <a className="landing__skip-link" href="#landing-main">
+        Skip to content
+      </a>
+
+      <header className="top-bar" role="banner">
         <span className="top-bar__title">
           <span className="top-bar__glyph" aria-hidden="true">
             🃏
@@ -50,6 +62,26 @@ export function LandingPage({ onStart }: LandingPageProps) {
           <ThemeToggle />
         </div>
       </header>
+
+      <main id="landing-main">
+      {/* Early Safari warning — shown ONLY to a detected iOS-in-non-Safari
+          visitor, near the very top, so they learn why nothing installs before
+          scrolling the whole page. Uses the loud --warn treatment + ⚠ glyph +
+          "Important" word (never colour-alone). role="alert" so a screen reader
+          announces it. Graceful: hidden entirely when detection is uncertain. */}
+      {iosNonSafari && (
+        <div className="landing__warn landing__warn--banner" role="alert" data-testid="ios-safari-banner">
+          <span className="landing__warn-glyph" aria-hidden="true">
+            ⚠
+          </span>
+          <span>
+            <strong>Important — open this in Safari.</strong> You’re on an iPhone
+            or iPad in a browser that <strong>can’t</strong> install this app.
+            Only <strong>Safari</strong> can add it to your home screen. Copy
+            this page’s link into Safari, then follow the iPhone steps below.
+          </span>
+        </div>
+      )}
 
       {/* 1. Hero ----------------------------------------------------------- */}
       <section className="landing__hero" aria-labelledby="landing-hero-title">
@@ -139,14 +171,20 @@ export function LandingPage({ onStart }: LandingPageProps) {
         aria-labelledby="landing-ios-title"
       >
         <h2 id="landing-ios-title" className="landing__h2">
-          <span aria-hidden="true">🍎</span> Install on iPhone / iPad
+          <span aria-hidden="true">🍎</span> Install on iPhone / iPad —{' '}
+          <span className="landing__h2-warn">Safari only</span>
         </h2>
-        <p className="landing__callout" role="note">
-          <strong>Important: on iPhone and iPad you must use Safari.</strong>{' '}
-          Chrome and other browsers can’t add this app to your home screen on
-          Apple devices — only Safari can. If you’re reading this in another
-          browser, copy the link into Safari first.
-        </p>
+        <div className="landing__warn" role="note" data-testid="ios-safari-warning">
+          <span className="landing__warn-glyph" aria-hidden="true">
+            ⚠
+          </span>
+          <span>
+            <strong>Important: on iPhone and iPad you must use Safari.</strong>{' '}
+            Chrome and other browsers can’t add this app to your home screen on
+            Apple devices — only Safari can. If you’re reading this in another
+            browser, copy the link into Safari first.
+          </span>
+        </div>
         <ol className="landing__steps">
           <li>
             Open this page in <strong>Safari</strong>.
@@ -185,18 +223,23 @@ export function LandingPage({ onStart }: LandingPageProps) {
         <HowToPlay />
       </section>
 
-      {/* Repeat the primary action at the foot, after the guides. ---------- */}
+      {/* Repeat the primary action at the foot, after the guides. The hero CTA
+          and this one share the visible label "Start scoring now", so this one
+          carries a distinguishing accessible name — an SR user navigating by
+          buttons can tell the two apart. */}
       <button
         type="button"
         className="btn btn--primary btn--block landing__cta landing__cta--foot"
         onClick={onStart}
         data-testid="landing-start-foot"
+        aria-label="Start scoring now — skip the guides"
       >
         Start scoring now ▸
       </button>
+      </main>
 
       {/* 7. Footer --------------------------------------------------------- */}
-      <footer className="landing__footer">
+      <footer className="landing__footer" role="contentinfo">
         <p>
           Yaniv Scorekeeper keeps your game on your own phone — nothing is sent
           anywhere, and it keeps working with no signal. Enjoyed it? Share this

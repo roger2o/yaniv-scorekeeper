@@ -126,6 +126,28 @@ describe('Landing — install sections', () => {
       screen.getByText(/only Safari can/i),
     ).toBeTruthy();
   });
+
+  it('surfaces the Safari requirement IN the iOS heading itself (M2)', () => {
+    render(<App />);
+    // The heading text now carries the "Safari only" tag so a visitor learns the
+    // requirement the moment they reach the heading, not after reading the box.
+    const heading = screen.getByRole('heading', { name: /Install on iPhone \/ iPad/ });
+    expect(heading.textContent).toMatch(/Safari only/i);
+  });
+
+  it('renders the iOS warning as a prominent WARN box, not the soft callout (M1)', () => {
+    render(<App />);
+    const warn = screen.getByTestId('ios-safari-warning');
+    // The heavier treatment: it is the .landing__warn box (distinct token), it
+    // carries a warning glyph, and the meaning is reinforced by the word
+    // "Important" + bold text (never colour-alone).
+    expect(warn.className).toContain('landing__warn');
+    expect(warn.textContent).toMatch(/⚠/);
+    expect(warn.textContent).toMatch(/Important/);
+    // It is NOT the old soft .landing__callout wash.
+    expect(warn.className).not.toContain('landing__callout');
+    expect(document.querySelector('.landing__callout')).toBeNull();
+  });
 });
 
 describe('Landing — both guides render from the shared single source', () => {
@@ -147,6 +169,97 @@ describe('Landing — both guides render from the shared single source', () => {
     const markup = landingMarkup();
     expect(markup).toContain(useMarkup);
     expect(markup).toContain(playMarkup);
+  });
+});
+
+describe('Landing — accessibility affordances (Twiggy findings)', () => {
+  it('the two "Start scoring now" buttons have DISTINCT accessible names (M3)', () => {
+    render(<App />);
+    const hero = screen.getByTestId('landing-start');
+    const foot = screen.getByTestId('landing-start-foot');
+    // Both show the same visible label...
+    expect(hero.textContent).toMatch(/Start scoring now/);
+    expect(foot.textContent).toMatch(/Start scoring now/);
+    // ...but the foot one carries a distinguishing accessible name, so an SR
+    // user navigating by buttons can tell them apart.
+    expect(foot.getAttribute('aria-label')).toMatch(/skip the guides/i);
+    expect(hero.getAttribute('aria-label')).toBeNull();
+    // Querying by the two accessible names returns two different elements.
+    expect(screen.getByRole('button', { name: /Start scoring now — skip the guides/i })).toBe(foot);
+  });
+
+  it('has a "skip to content" link as the first focusable element pointing at main (m3)', () => {
+    render(<App />);
+    const skip = screen.getByRole('link', { name: /skip to content/i });
+    expect(skip.getAttribute('href')).toBe('#landing-main');
+    // The target landmark exists.
+    expect(document.getElementById('landing-main')).not.toBeNull();
+  });
+
+  it('exposes page-level banner / main / contentinfo landmarks (m2)', () => {
+    render(<App />);
+    // banner (the top bar) and contentinfo (the footer) are page-level, NOT
+    // nested inside <main> via the app shell.
+    const banner = screen.getByRole('banner');
+    const main = screen.getByRole('main');
+    const contentinfo = screen.getByRole('contentinfo');
+    expect(banner).toBeTruthy();
+    expect(main).toBeTruthy();
+    expect(contentinfo).toBeTruthy();
+    // The header and footer must not sit inside <main>.
+    expect(main.contains(banner)).toBe(false);
+    expect(main.contains(contentinfo)).toBe(false);
+  });
+
+  it('the card-values table has an accessible name via <caption> (m4)', () => {
+    render(<App />);
+    // The shared How-to-Play table now carries a caption (announced by SRs).
+    const caption = document.querySelector('.help-table caption');
+    expect(caption).not.toBeNull();
+    expect(caption!.textContent).toMatch(/what each card is worth/i);
+  });
+});
+
+describe('Landing — early iOS-non-Safari banner (M2 detection)', () => {
+  const realUA = navigator.userAgent;
+
+  function stubUA(ua: string, maxTouchPoints = 5, platform = 'iPhone') {
+    Object.defineProperty(navigator, 'userAgent', { value: ua, configurable: true });
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: maxTouchPoints, configurable: true });
+    Object.defineProperty(navigator, 'platform', { value: platform, configurable: true });
+  }
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'userAgent', { value: realUA, configurable: true });
+  });
+
+  it('floats the early warning banner for Chrome-on-iOS (CriOS)', () => {
+    stubUA(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0 Mobile/15E148 Safari/604.1',
+    );
+    render(<App />);
+    const banner = screen.getByTestId('ios-safari-banner');
+    expect(banner).toBeTruthy();
+    expect(banner.getAttribute('role')).toBe('alert');
+    expect(banner.textContent).toMatch(/open this in Safari/i);
+  });
+
+  it('does NOT show the banner for genuine iOS Safari (graceful — no wrong warning)', () => {
+    stubUA(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    );
+    render(<App />);
+    expect(screen.queryByTestId('ios-safari-banner')).toBeNull();
+  });
+
+  it('does NOT show the banner for a desktop visitor (graceful)', () => {
+    stubUA(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+      0,
+      'Win32',
+    );
+    render(<App />);
+    expect(screen.queryByTestId('ios-safari-banner')).toBeNull();
   });
 });
 

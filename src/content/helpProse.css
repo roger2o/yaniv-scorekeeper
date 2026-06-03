@@ -55,6 +55,16 @@
   margin: 8px 0;
 }
 
+/* Accessible name for the table (announced by screen readers); kept visible as
+   a small, muted heading-style line above the table. */
+.help-table__caption {
+  caption-side: top;
+  text-align: left;
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  padding: 0 0 6px;
+}
+
 .help-table th,
 .help-table td {
   text-align: left;

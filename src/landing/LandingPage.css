@@ -114,17 +114,77 @@
   margin: 8px 0;
 }
 
-/* The iOS Safari gotcha — a prominent, accent-washed note so it can't be
-   missed. Colour is reinforced by the word "Important" + bold text, never
-   colour-alone. */
-.landing__callout {
-  background: var(--accent-soft);
-  border: 1px solid var(--border-strong);
+/* The iOS Safari requirement — the single most install-critical instruction on
+   the page, so it gets a DISTINCT, visually heavier WARNING treatment that
+   out-weights every other box: a saturated --warn surface, a thick contrasting
+   border, an elevation shadow, and a ⚠ glyph. Meaning is carried by the glyph +
+   the word "Important" + bold text — never colour-alone. Two uses:
+     .landing__warn            the in-section iOS callout
+     .landing__warn--banner    the early top-of-page banner (iOS-non-Safari only) */
+.landing__warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--warn);
+  color: var(--warn-ink);
+  border: 3px solid var(--warn-border);
   border-radius: var(--radius);
-  padding: 12px 14px;
-  margin: 0 0 14px;
+  padding: 14px 16px;
+  margin: 0 0 16px;
   line-height: 1.5;
-  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+/* Bold text inside the warn box inherits the dark warn ink (it must not pick up
+   the page --ink, which would be illegible on amber). */
+.landing__warn strong {
+  color: var(--warn-ink);
+  font-weight: 800;
+}
+
+.landing__warn-glyph {
+  flex: 0 0 auto;
+  font-size: 1.4rem;
+  line-height: 1.2;
+}
+
+/* The early banner floats near the top for a detected iOS-non-Safari visitor. */
+.landing__warn--banner {
+  margin: 8px 0 4px;
+}
+
+/* "Safari only" tag inside the iOS section heading — keeps the warn hue so the
+   requirement is visible the moment the heading is read. Paired with the full
+   warn box right below, so it is never the sole signal. */
+.landing__h2-warn {
+  color: var(--warn-ink);
+  background: var(--warn);
+  border: 2px solid var(--warn-border);
+  border-radius: var(--radius-pill);
+  padding: 1px 10px;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* Skip-to-content link — visually hidden until focused, then pinned top-left so
+   a keyboard user sees where focus is. Standard AA affordance for a long page. */
+.landing__skip-link {
+  position: absolute;
+  left: 8px;
+  top: -100px;
+  z-index: 100;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-weight: 800;
+  text-decoration: none;
+  transition: top var(--dur-base) var(--ease-out);
+}
+
+.landing__skip-link:focus {
+  top: 8px;
 }
 
 /* --- Footer --------------------------------------------------------------- */

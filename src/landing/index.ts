@@ -1,5 +1,5 @@
 export { LandingPage } from './LandingPage';
-export { isStandalone } from './installState';
+export { isStandalone, isIosNonSafari } from './installState';
 export {
   readLandingDismissed,
   persistLandingDismissed,

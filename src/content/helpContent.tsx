@@ -204,6 +204,9 @@ export function HowToPlay() {
       <section aria-labelledby="play-b2">
         <h3 id="play-b2">Card values</h3>
         <table className="help-table">
+          <caption className="help-table__caption">
+            What each card is worth when you total a hand
+          </caption>
           <thead>
             <tr>
               <th scope="col">Card</th>

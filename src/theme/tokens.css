@@ -56,6 +56,17 @@
   --accent-soft: #3a6f5c; /* soft brass-tinted felt wash */
   --danger: #b3382f; /* warm red (darkened so ivory-on-danger clears WCAG AA) */
   --danger-ink: #f4ecd8; /* ivory on red (~5.06:1, clears 4.5:1 AA) */
+  /* WARNING surface — louder than --accent-soft, for the single install-critical
+     "you must use Safari on iPhone" callout. A saturated amber pill with dark
+     warm ink and a deep-brown heavy border so it out-weights every other box.
+     Reinforced by a ⚠ glyph + the word "Important" (never colour-alone).
+     Measured on the felt card (--surface-raised #27604e):
+       --warn fill #e8b04a vs felt card  -> 3.74:1 (graphic separation, >=3:1)
+       --warn-ink #241e1a on --warn      -> 8.42:1 (AA text, clears 4.5:1)
+       --warn-border #6b3410 on --warn   -> 5.06:1 (strong delineating edge) */
+  --warn: #e8b04a; /* amber warn surface */
+  --warn-ink: #241e1a; /* warm near-black on amber (~8.42:1) */
+  --warn-border: #6b3410; /* deep brown heavy border (~5.06:1 on amber) */
   --celebrate: #e7c14a; /* brighter gold burst */
   /* Word-label outcome text colours used AS TEXT on the raised-felt cell
      (--surface-raised #27604e), not as a pill. A saturated red/green can't
@@ -109,6 +120,16 @@
   --accent-soft: #ece4fb; /* soft grape wash for selected fields */
   --danger: #d23b2e; /* coral-red */
   --danger-ink: #fffdf8;
+  /* WARNING surface — see Theme A note. On the light arcade card the amber fill
+     alone doesn't separate (1.61:1), so the louder coral-red --danger BORDER
+     does the delineation; reinforced by the ⚠ glyph + "Important".
+     Measured on the white card (--surface-raised #fffdf8):
+       --warn-ink #23201e on --warn #f6c343 -> 9.87:1 (AA text, clears 4.5:1)
+       --warn-border #d23b2e vs white card   -> 4.69:1 (strong delineating edge)
+       --warn-border #d23b2e vs --warn fill   -> 2.91:1 (visible on the amber) */
+  --warn: #f6c343; /* bright amber warn surface */
+  --warn-ink: #23201e; /* warm near-black on amber (~9.87:1) */
+  --warn-border: #d23b2e; /* coral-red heavy border (loud alarm edge) */
   --celebrate: #e8a317; /* sun-gold pop */
   /* Word-label outcome text colours used AS TEXT on the raised-white cell
      (--surface-raised #fffdf8), not as a pill. On the light surface a true

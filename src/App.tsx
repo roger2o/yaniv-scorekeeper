@@ -79,15 +79,16 @@ function Shell() {
   );
 
   if (showLanding) {
+    // The landing renders its OWN page-level landmarks (banner / main /
+    // contentinfo), so it is NOT wrapped in the generic <main> the in-app
+    // screens use — that would demote its header/footer to inside <main>.
     return (
-      <main>
-        <LandingPage
-          onStart={() => {
-            persistLandingDismissed();
-            setShowLanding(false);
-          }}
-        />
-      </main>
+      <LandingPage
+        onStart={() => {
+          persistLandingDismissed();
+          setShowLanding(false);
+        }}
+      />
     );
   }
 
