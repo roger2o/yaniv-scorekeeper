@@ -450,6 +450,141 @@ describe('NESTED FREEZE — the singleton registry cannot bleed', () => {
 });
 
 // ===========================================================================
+// PART 2b — the PER-ELEMENT RECORD itself
+//
+// The bookkeeping is no longer a page-level snapshot: it is a record per element
+// of what that element looked like immediately before WE froze IT, written lazily
+// and never overwritten. "Never overwritten" is the property that makes an
+// already-frozen page impossible to mistake for the true one — and it is also the
+// property that would silently go stale if a record ever outlived the cycle that
+// created it. Both directions are attacked here.
+// ===========================================================================
+
+describe('NESTED FREEZE — the per-element record', () => {
+  /** A page-level sibling of the app, i.e. an element the freeze records. */
+  function addSibling(id: string): HTMLElement {
+    const el = document.createElement('div');
+    el.setAttribute('data-testid', id);
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it('the SAME element frozen by two layers keeps ONE record, taken before the FIRST freeze', () => {
+    renderStack();
+    const sib = addSibling('sib');
+
+    open('a'); // records sib as {no aria-hidden, no inert}, then freezes it
+    open('b'); // freezes sib AGAIN — must not re-read the frozen values
+    open('c'); // and again
+    expect(sib.getAttribute('aria-hidden')).toBe('true');
+
+    close('c');
+    close('b');
+    close('a');
+
+    expect(
+      sib.hasAttribute('inert'),
+      'the record was overwritten with already-frozen values',
+    ).toBe(false);
+    expect(sib.getAttribute('aria-hidden')).toBeNull();
+    sib.remove();
+  });
+
+  it('a record does NOT survive its cycle: a value changed in between wins next time', () => {
+    renderStack();
+    const sib = addSibling('sib');
+
+    // Cycle one: sib is genuinely unhidden, and comes back unhidden.
+    open('a');
+    close('a');
+    expect(sib.getAttribute('aria-hidden')).toBeNull();
+
+    // Between cycles, something legitimately hides it — a collapsed panel, a
+    // decorative layer, anything the app or a browser feature owns.
+    sib.setAttribute('aria-hidden', 'true');
+    sib.setAttribute('inert', '');
+
+    // Cycle two must record the CURRENT truth, not reuse cycle one's record.
+    open('a');
+    open('b');
+    close('b');
+    close('a');
+    expect(
+      sib.getAttribute('aria-hidden'),
+      'a stale record from an earlier cycle overwrote the current truth',
+    ).toBe('true');
+    expect(sib.hasAttribute('inert'), 'a stale record cleared a live inert').toBe(true);
+    sib.remove();
+  });
+
+  it('an element REMOVED from the page while frozen does not break the restore of the rest', () => {
+    renderStack();
+    const doomed = addSibling('doomed');
+    const survivor = addSibling('survivor');
+
+    open('a');
+    open('b');
+    expect(doomed.getAttribute('aria-hidden')).toBe('true');
+
+    // The recorded element leaves the document before the restore runs.
+    doomed.remove();
+
+    close('b');
+    close('a');
+    expect(
+      survivor.hasAttribute('inert'),
+      'a record for a removed element blocked the restore of a live one',
+    ).toBe(false);
+    expect(survivor.getAttribute('aria-hidden')).toBeNull();
+    expectThawed('after an element was removed while frozen');
+    survivor.remove();
+  });
+
+  it('a third party clearing our freeze mid-session does not leave the element frozen', () => {
+    renderStack();
+    const sib = addSibling('sib');
+
+    open('a');
+    // Something else strips the attributes we applied — an extension tidying up,
+    // a framework re-rendering the node. The final restore must still leave it in
+    // its true, usable state rather than re-freezing it.
+    sib.removeAttribute('inert');
+    sib.removeAttribute('aria-hidden');
+    open('b');
+    close('b');
+    close('a');
+
+    expect(sib.hasAttribute('inert')).toBe(false);
+    expect(sib.getAttribute('aria-hidden')).toBeNull();
+    sib.remove();
+  });
+
+  it('50 cycles with page churn leave no element and no cycle carrying a leftover freeze', () => {
+    renderStack();
+    const seen: HTMLElement[] = [];
+    for (let i = 0; i < 50; i += 1) {
+      const sib = addSibling(`churn-${i}`);
+      seen.push(sib);
+      open('a');
+      // Nest, so applyFreeze runs again and this cycle's element is recorded.
+      open('b');
+      expect(sib.getAttribute('aria-hidden'), `cycle ${i}`).toBe('true');
+      close('b');
+      close('a');
+      expect(sib.hasAttribute('inert'), `cycle ${i}: element left inert`).toBe(false);
+      expect(sib.getAttribute('aria-hidden'), `cycle ${i}: element left hidden`).toBeNull();
+      expectThawed(`cycle ${i}`);
+      sib.remove();
+    }
+    // Nothing from an earlier cycle was resurrected by a later restore.
+    for (const [i, el] of seen.entries()) {
+      expect(el.hasAttribute('inert'), `element from cycle ${i} re-frozen later`).toBe(false);
+      expect(el.getAttribute('aria-hidden')).toBeNull();
+    }
+  });
+});
+
+// ===========================================================================
 // PART 3 — the real app, re-confirmed through the real UI
 // ===========================================================================
 
