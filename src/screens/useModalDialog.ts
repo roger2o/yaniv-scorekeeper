@@ -27,6 +27,7 @@
  */
 
 import { useCallback, useEffect, useId, useRef } from 'react';
+import { isInTopModalLayer } from './modal';
 
 /** Focusable candidates inside a dialog. */
 const DIALOG_FOCUSABLE =
@@ -54,6 +55,17 @@ const DIALOG_FOCUSABLE =
  * `last` could match it and Tab would fall through to the page BEHIND the
  * dialog. Keeping the focused element in the set guarantees the cycle always has
  * a defined next stop.
+ *
+ * A SECOND, SEPARATE LIMIT, stated plainly: this trap is not live at all when
+ * focus sits on <body> — which happens as soon as the user taps non-focusable
+ * dialog text. The Tab handler is attached to the dialog element, so it never
+ * sees that keypress, and containment then rests entirely on the browser skipping
+ * the `inert` background (see ModalLayer). That is true on Chrome and on Safari,
+ * i.e. every platform this PWA installs on, and on Firefox from v112. On an older
+ * Firefox, a Tab from the <body> state could reach the page behind the dialog. It
+ * is left as-is deliberately: moving the Tab handler to `document` as well would
+ * make this file responsible for arbitrating focus across the whole page, which is
+ * a bigger change than the exposure justifies for the target platforms.
  */
 function focusablesIn(root: HTMLElement | null): HTMLElement[] {
   if (root === null) return [];
@@ -136,9 +148,14 @@ export function useModalDialog({
   }, []);
 
   // --- Escape closes, wherever focus happens to be. -------------------------
+  // Bound on `document` so it still fires with focus parked on <body>, which is
+  // where a tap on non-focusable dialog text leaves it. The top-layer check means
+  // that if two dialogs were ever open, one Escape dismisses only the one on top
+  // rather than every listener firing at once.
   useEffect(() => {
     const onDocumentKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (!isInTopModalLayer(dialogRef.current)) return;
       e.stopPropagation();
       onCloseRef.current();
     };

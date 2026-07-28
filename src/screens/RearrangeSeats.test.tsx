@@ -158,7 +158,7 @@ describe('Rearrange seats — entering and leaving the mode', () => {
     expect(screen.getByTestId('stored-ring-order').textContent).toBe('b,a,c,d');
   });
 
-  it('"Back to the setup order" resets the draft and stores nothing', () => {
+  it('"Setup order" resets the draft and stores nothing', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
     fireEvent.click(screen.getByTestId('move-later-a'));
@@ -166,7 +166,7 @@ describe('Rearrange seats — entering and leaving the mode', () => {
     expect(screen.getByTestId('stored-ring-order').textContent).toBe('b,a,c,d');
 
     openRearrange();
-    fireEvent.click(screen.getByRole('button', { name: /Back to the setup order/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Setup order$/ }));
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
 
     expect(ringOrderOnScreen()).toEqual(['a', 'b', 'c', 'd']);
@@ -256,7 +256,7 @@ describe('Rearrange seats — accessible move controls (buttons, not gestures)',
     renderPlay(ONE_ROUND);
     const panel = openRearrange();
     const live = panel.querySelector('[role="status"]') as HTMLElement;
-    const reset = screen.getByRole('button', { name: /Back to the setup order/ });
+    const reset = screen.getByRole('button', { name: /^Setup order$/ });
 
     fireEvent.click(reset);
     const first = live.textContent;

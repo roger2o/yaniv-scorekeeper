@@ -57,13 +57,28 @@
  * raised card, and `--border-strong` only reaches 2.04:1 / 1.54:1 — so each
  * variant borrows a token that genuinely reads as an edge.
  *
+ * WEIGHT ORDER. The edge only has to be legible; PROMINENCE is carried by the
+ * FILL, which is the right channel for it. So the quiet variants take the
+ * quietest edge that still clears 3:1, and the destructive variant is loud
+ * because it is red, not because it is outlined in the brightest colour in the
+ * app. Resulting order, quietest to loudest: ghost (no fill) < secondary (raised
+ * fill) < danger (red fill) — with primary a filled accent button in its own
+ * right. An earlier revision had this inverted: ghost, explicitly the quietest
+ * control in its row, ended up with a stronger edge than secondary, and danger
+ * carried --ink, which on the felt theme is the brightest edge anywhere in the
+ * app and roughly four times the contrast of the dialog panel's own frame.
+ *
  * Measured boundary contrast (border colour vs the surface behind the button):
- *                     vs --surface        vs --surface-raised     vs own fill
- *   --secondary  --accent      4.12 / 4.59      3.03 / 4.86            n/a
- *   --ghost      --ink-muted   6.75 / 5.72      4.95 / 6.06            n/a
- *   --danger     --ink         8.47 / 15.05     6.22 / 15.93     5.06 / 3.40
- *   --primary    (filled --accent, 4.12 / 4.59 against the page surface)
- * (Felt / Arcade. All clear 3:1.)
+ *                                  vs --surface     vs --surface-raised
+ *   --ghost      --accent           4.12 / 4.59        3.03 / 4.86
+ *   --secondary  --ink-muted        6.75 / 5.72        4.95 / 6.06
+ *   --danger     --accent           4.12 / 4.59        3.03 / 4.86
+ *   --primary    (filled --accent)  4.12 / 4.59        3.03 / 4.86
+ * (Felt / Arcade. All clear the 3:1 non-text bar on both surfaces.)
+ *
+ * Ghost and danger share an edge colour deliberately: one has no fill and the
+ * other is filled red, so they are never confusable, and it keeps the
+ * destructive button's edge modest while its fill does the shouting.
  *
  * Text contrast is unchanged: --ink on --surface-raised 6.22 / 15.93,
  * --accent-ink on --accent 6.81 / 4.86, --danger-ink on --danger 5.06 / 4.69,
@@ -89,26 +104,28 @@
   box-shadow: var(--shadow);
 }
 
-/* Outlined counterpart to --primary: same accent language, unfilled. */
+/* Mid-weight: a raised fill plus the strongest of the three edges, so it reads
+   above ghost even though the two fills are nearly indistinguishable on the page
+   surface (--surface-raised is only 1.36:1 / 1.06:1 against it). */
 .btn--secondary {
   background: var(--surface-raised);
   color: var(--ink);
-  border-color: var(--accent);
+  border-color: var(--ink-muted);
 }
 
-/* Destructive. A neutral high-contrast edge rather than the accent, so it is
-   never mistaken for the primary action it sits beside. */
+/* Destructive. The RED FILL carries the weight; the edge only has to be legible,
+   so it stays modest rather than becoming the brightest line on the screen. */
 .btn--danger {
   background: var(--danger);
   color: var(--danger-ink);
-  border-color: var(--ink);
+  border-color: var(--accent);
 }
 
-/* Quietest of the three, but still a legible edge. */
+/* Quietest: no fill at all, and the quietest edge that still clears 3:1. */
 .btn--ghost {
   background: transparent;
   color: var(--ink);
-  border-color: var(--ink-muted);
+  border-color: var(--accent);
 }
 
 .btn--block {

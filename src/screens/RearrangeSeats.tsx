@@ -174,14 +174,16 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
 
       <ol className="rearrange__list" data-testid="rearrange-list">
         {draft.map((playerId, index) => {
-          // Reconciliation guarantees every draft id is a current player, so a
-          // missing row is a broken invariant, not a state to quietly render
-          // round — silently dropping the row would show a short list and hide
-          // the bug.
+          // Reconciliation guarantees every draft id is a current player, so this
+          // should be unreachable. It stays a NO-OP rather than a loud throw on
+          // purpose: there is no error boundary anywhere in this app, so a throw
+          // during render empties the root and white-screens the whole thing. On
+          // the one screen a scorekeeper opens mid-game, in an app with no safety
+          // net and no backend copy of the game, a short list is a far better
+          // failure than a lost game. (An error boundary would be a genuine
+          // improvement, but it is an app-wide change and not part of this work.)
           const row = rowById.get(playerId);
-          if (row === undefined) {
-            throw new Error(`Rearrange seats: no player at the table for id ${playerId}`);
-          }
+          if (row === undefined) return null;
           const position = index + 1;
           return (
             <li
@@ -258,8 +260,12 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
         <button type="button" className="btn btn--secondary" onClick={onDone}>
           Cancel
         </button>
+        {/* "Setup order", not "Back to the setup order": the long label forced the
+            permanently-visible bar onto two rows, which ate the list this bar
+            exists to keep usable. Short, and still clearly distinct from
+            "Save order". */}
         <button type="button" className="btn btn--ghost" onClick={useSetupOrder}>
-          Back to the setup order
+          Setup order
         </button>
         <button type="button" className="btn btn--primary" onClick={save}>
           Save order

@@ -19,6 +19,8 @@
  *      height:100% and the frame is a flex item with min-height:0), so a
  *      `flex:1; overflow-y:auto; min-height:0` child scrolls internally and the
  *      title, intro, note and actions are all permanently visible.
+ *      The bar is kept to ONE row (see the note on its own rule below), because a
+ *      permanently-visible bar is a permanent tax on the list's height.
  *   3. The action row is ALSO `position: sticky; bottom: 0` with an opaque
  *      background. That is inert while (2) holds — nothing overflows the frame,
  *      so there is nothing to stick to — and exists only as a fallback for the
@@ -189,7 +191,17 @@
   border-top: 2px solid var(--border-strong);
 }
 
+/* The bar is permanently visible, so its height is a permanent tax on the list.
+   Three buttons at a 130px minimum could not fit the ~343px frame (3 x 130 + 2 x 10
+   gap = 410px), so the bar wrapped onto two rows and stood roughly 145px tall
+   against ~560px of usable height on the smallest phone — squeezing the very list
+   it exists to protect. These share the row instead: no minimum, tighter padding,
+   a slightly smaller face, and labels kept short enough not to wrap. That is one
+   row, about 78px. */
 .rearrange__actions .btn {
-  flex: 1;
-  min-width: 130px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }

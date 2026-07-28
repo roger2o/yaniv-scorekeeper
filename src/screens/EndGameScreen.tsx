@@ -14,6 +14,7 @@
  * settings (fresh ids; mid-game joiners become normal round-0 players).
  */
 
+import { useEffect, useRef } from 'react';
 import { useStore } from '../state';
 import type { GameSettings } from '../engine';
 import { useTheme } from '../theme';
@@ -24,6 +25,13 @@ import './EndGameScreen.css';
 export function EndGameScreen() {
   const { game, state, resetGame, startGame, setRingOrder } = useStore();
   const { theme } = useTheme();
+
+  // See the note on the element itself: arriving here means the control that had
+  // focus has just been destroyed, so focus is placed on the result.
+  const crownRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    crownRef.current?.focus();
+  }, []);
 
   if (game === null) {
     return (
@@ -100,7 +108,14 @@ export function EndGameScreen() {
     <div className="app-frame end">
       {theme === 'arcade' && <Confetti />}
 
-      <div className="end__crown" role="status">
+      {/* Focus lands here when this screen replaces the Play screen. Confirming
+          "End game" destroys the button that was focused, so without this a
+          keyboard or switch-access user is dropped on <body> and has to traverse
+          the whole screen to find out what happened. The winner block is the
+          right landing point because it IS the answer to "what happened".
+          (A proper page <h1> would be better still, but the missing headings on
+          sub-screens are an app-wide gap being handled separately.) */}
+      <div className="end__crown" role="status" ref={crownRef} tabIndex={-1}>
         <span className="end__trophy" aria-hidden="true">
           🏆
         </span>

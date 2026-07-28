@@ -21,6 +21,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { StoreProvider, useStore } from '../state';
 import { ThemeProvider } from '../theme';
 import { PlayScreen } from './PlayScreen';
+import { EndGameScreen } from './EndGameScreen';
 import { FakeStorage } from '../state/test-helpers';
 import type { GameSettings, RoundEntry } from '../engine';
 
@@ -53,7 +54,7 @@ function Harness({ settings }: { settings: GameSettings }) {
     <>
       <span data-testid="screen">{state.screen}</span>
       <span data-testid="history-len">{state.history.length}</span>
-      {state.screen === 'play' && <PlayScreen />}
+      {state.screen === 'end' ? <EndGameScreen /> : <PlayScreen />}
     </>
   );
 }
@@ -180,6 +181,110 @@ describe('End game — confirming ends it exactly as before', () => {
     // History is the source of truth and must be untouched by ending the game.
     expect(screen.getByTestId('history-len').textContent).toBe('1');
     expect(screen.queryByTestId('confirm-end-game')).toBeNull();
+  });
+});
+
+describe('End game — the shared freeze registry is self-healing', () => {
+  it('a dialog still works after a previous layer container was ripped out', () => {
+    renderPlay();
+    fireEvent.click(endGameTrigger());
+    const layer = document.querySelector('.modal-layer')!;
+
+    // Simulate the one way the module-level registry could go stale: a container
+    // leaving the document WITHOUT its cleanup running (a test teardown that
+    // sweeps the DOM, a stray removeChild). The registry must not be poisoned by
+    // it, because a detached "top layer" would match nothing and the freeze would
+    // then be applied to the whole page including the live dialog.
+    layer.remove();
+    // The portal's DOM went with it, so the dialog is dismissed with Escape (a
+    // document-level listener, still live) rather than by clicking a button that
+    // no longer exists.
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(screen.queryByTestId('confirm-end-game')).toBeNull();
+
+    // A fresh cycle behaves normally: frozen while open, fully thawed after.
+    fireEvent.click(endGameTrigger());
+    const shells = Array.from(document.body.children).filter(
+      (el) => !el.classList.contains('modal-layer'),
+    );
+    for (const el of shells) expect(el.hasAttribute('inert')).toBe(true);
+    expect(document.activeElement).toBe(screen.getByTestId('confirm-end-game-cancel'));
+
+    fireEvent.click(screen.getByTestId('confirm-end-game-cancel'));
+    for (const el of shells) expect(el.hasAttribute('inert')).toBe(false);
+    expect(document.body.style.overflow).toBe('');
+    expect(screen.getByTestId('screen').textContent).toBe('play');
+  });
+});
+
+describe('End game — focus is never returned into a frozen background', () => {
+  /**
+   * This depends on React running cleanups PARENT-FIRST on deletion: the modal
+   * layer thaws the page before the dialog's own cleanup returns focus to the
+   * trigger. If that ordering ever changed, focus would be handed back into an
+   * `inert` subtree and simply not land — and jsdom does NOT implement `inert`, so
+   * every test in this repo would stay green while real phones broke.
+   *
+   * So rather than trusting the flag, this records the DOM state at the exact
+   * moment focus() is called, which is ordering-sensitive and environment-neutral.
+   */
+  function recordFocusCalls() {
+    const calls: Array<{ target: HTMLElement; inertAncestor: boolean; ariaHidden: boolean }> =
+      [];
+    const original = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function patched(this: HTMLElement, ...args) {
+      calls.push({
+        target: this,
+        inertAncestor: this.closest('[inert]') !== null,
+        ariaHidden: this.closest('[aria-hidden="true"]') !== null,
+      });
+      return original.apply(this, args);
+    };
+    return { calls, restore: () => (HTMLElement.prototype.focus = original) };
+  }
+
+  it('the trigger is already thawed when focus is handed back to it', () => {
+    renderPlay();
+    const trigger = endGameTrigger();
+    fireEvent.click(trigger);
+    // Sanity: while the dialog is open the trigger IS inside the frozen page.
+    expect(trigger.closest('[inert]')).not.toBeNull();
+
+    const { calls, restore } = recordFocusCalls();
+    try {
+      fireEvent.click(screen.getByTestId('confirm-end-game-cancel'));
+    } finally {
+      restore();
+    }
+
+    const returned = calls.filter((c) => c.target === trigger);
+    expect(returned.length).toBeGreaterThan(0);
+    for (const call of returned) {
+      expect(call.inertAncestor, 'focus was returned into an inert subtree').toBe(false);
+      expect(call.ariaHidden, 'focus was returned into an aria-hidden subtree').toBe(
+        false,
+      );
+    }
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('confirming moves focus to the end screen rather than dropping it on <body>', () => {
+    renderPlay();
+    fireEvent.click(endGameTrigger());
+    fireEvent.click(screen.getByTestId('confirm-end-game-confirm'));
+
+    // The trigger no longer exists, so there is nothing to return focus to. Left
+    // alone, a keyboard or switch-access user would be dumped on <body> at the top
+    // of a screen they had not asked for. Focus lands on the result instead.
+    expect(screen.getByTestId('screen').textContent).toBe('end');
+    expect(document.activeElement).not.toBe(document.body);
+    const active = document.activeElement as HTMLElement;
+    expect(active.className).toContain('end__crown');
+    // And what it announces is the answer to "what just happened".
+    expect(active.textContent).toMatch(/Winner/i);
+    // Nothing is left frozen behind a dialog that no longer exists.
+    expect(document.body.style.overflow).toBe('');
+    expect(document.querySelector('.modal-layer')).toBeNull();
   });
 });
 
