@@ -49,6 +49,13 @@ export interface StoreActions {
   undoLastRound: () => void;
   /** Edit the most recent round only (locked: most-recent-only). */
   editLastRound: (round: RoundEntry) => void;
+  /**
+   * Set the DISPLAY-ONLY circle-view seating arrangement (player ids in ring
+   * order), or clear it with `undefined` to fall back to the engine's seat
+   * order. Purely visual: the engine's inputs are untouched, so scoring, who
+   * starts the next round, and the scoresheet column order cannot change.
+   */
+  setRingOrder: (order: string[] | undefined) => void;
   endGame: () => void;
   resetGame: () => void;
 }
@@ -152,9 +159,16 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
 
   // Persist the minimal slice on every change. If a write fails, surface a
   // non-fatal warning but never block or crash the game.
+  // The optional circle-view arrangement is included ONLY when one is set, so an
+  // untouched game keeps persisting in the exact shape earlier builds wrote.
   const slice: GameStateSlice = useMemo(
-    () => ({ settings: state.settings, history: state.history, screen: state.screen }),
-    [state.settings, state.history, state.screen],
+    () => ({
+      settings: state.settings,
+      history: state.history,
+      screen: state.screen,
+      ...(state.ringOrder === undefined ? {} : { ringOrder: state.ringOrder }),
+    }),
+    [state.settings, state.history, state.screen, state.ringOrder],
   );
 
   // Avoid persisting the very first render's restored state back over itself in
@@ -210,6 +224,7 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
       addRound: (round) => dispatch({ type: 'ADD_ROUND', round }),
       undoLastRound: () => dispatch({ type: 'UNDO_LAST_ROUND' }),
       editLastRound: (round) => dispatch({ type: 'EDIT_LAST_ROUND', round }),
+      setRingOrder: (order) => dispatch({ type: 'SET_RING_ORDER', order }),
       endGame: () => dispatch({ type: 'END_GAME' }),
       resetGame: () => {
         // Clearing storage on reset is best-effort and never throws.

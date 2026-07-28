@@ -14,17 +14,27 @@
  * the last round. If an edit/undo makes the engine reject the game (e.g. a
  * recorded join no longer has a round to land in), we show a plain message and
  * offer undo instead of a blank screen.
+ *
+ * "End game" is UNRECOVERABLE (undo covers only the most recent round), so it
+ * goes through a confirmation step first — see ConfirmDialog.
+ *
+ * "Rearrange seats" lets the scorekeeper match the ring to players who have
+ * physically swapped seats. It is DISPLAY ONLY and affects nothing but this
+ * circle view — see RearrangeSeats / ringOrder.ts.
  */
 
 import { useState } from 'react';
 import { useStore } from '../state';
-import type { GameState } from '../engine';
+import type { GameState, StandingRow } from '../engine';
 import { ThemeToggle } from '../theme';
 import { HelpButton } from './HelpButton';
 import { RoundEntry } from './RoundEntry';
 import { Callouts } from './Callouts';
 import { BigBoard } from './BigBoard';
+import { ConfirmDialog } from './ConfirmDialog';
+import { RearrangeSeats } from './RearrangeSeats';
 import { ringSlots, MAX_RING_PLAYERS } from './ringLayout';
+import { reconcileRingOrder } from './ringOrder';
 import { seatColorVar, seatShape } from './seat';
 import './PlayScreen.css';
 
@@ -36,6 +46,8 @@ export function PlayScreen() {
   const [showBoard, setShowBoard] = useState(false);
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [newName, setNewName] = useState('');
+  const [rearranging, setRearranging] = useState(false);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
 
   // --- Engine-error guard (edit/undo invalidated a mid-game join, etc.) ----
   // When the current source-of-truth makes the engine throw, `game` is null. We
@@ -89,6 +101,19 @@ export function PlayScreen() {
   const slots = ringSlots(playerCount);
   const useBoard = showBoard || slots === null || playerCount > MAX_RING_PLAYERS;
 
+  if (rearranging) {
+    return <RearrangeSeats game={game} onDone={() => setRearranging(false)} />;
+  }
+
+  // The ring is drawn in the scorekeeper's DISPLAY arrangement, reconciled
+  // against who is actually at the table (a mid-game join or a removed player
+  // must never leave a stale ring). Absent an arrangement this is exactly the
+  // engine's seat order, which is the default and the fallback.
+  const ringOrder = reconcileRingOrder(
+    state.ringOrder,
+    game.standings.map((s) => s.playerId),
+  );
+
   const commitAddPlayer = () => {
     addPlayer(newName);
     setNewName('');
@@ -115,7 +140,12 @@ export function PlayScreen() {
       {useBoard ? (
         <BigBoardView game={game} onNewRound={() => setEntering(true)} />
       ) : (
-        <RingView game={game} slots={slots!} onNewRound={() => setEntering(true)} />
+        <RingView
+          game={game}
+          slots={slots!}
+          ringOrder={ringOrder}
+          onNewRound={() => setEntering(true)}
+        />
       )}
 
       <div className="play__view-switch">
@@ -181,10 +211,47 @@ export function PlayScreen() {
           >
             ↩ Undo round
           </button>
-          <button type="button" className="btn btn--ghost" onClick={endGame}>
+          {/* Rearranging is a CIRCLE-VIEW-ONLY preference, so it is only offered
+              while the circle view is the one in use. */}
+          {!useBoard && (
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => setRearranging(true)}
+            >
+              ⇄ Rearrange seats
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn--ghost"
+            aria-haspopup="dialog"
+            onClick={() => setConfirmingEnd(true)}
+          >
             End game
           </button>
         </div>
+      )}
+
+      {/* Ending the game cannot be undone (undo covers only the most recent
+          round), so it goes through an explicit confirmation. Escape, the
+          backdrop, and "Keep playing" all leave the game running. */}
+      {confirmingEnd && (
+        <ConfirmDialog
+          testId="confirm-end-game"
+          title="End the game?"
+          confirmLabel="End game"
+          cancelLabel="Keep playing"
+          tone="danger"
+          onCancel={() => setConfirmingEnd(false)}
+          onConfirm={() => {
+            setConfirmingEnd(false);
+            endGame();
+          }}
+        >
+          The game will be ended now and the final result shown. This cannot be
+          undone.
+        </ConfirmDialog>
       )}
     </div>
   );
@@ -200,18 +267,33 @@ function leaderIdOf(game: GameState): string | null {
   return contenders.reduce((best, s) => (s.total < best.total ? s : best)).playerId;
 }
 
+/**
+ * The ring is drawn in the DISPLAY arrangement (`ringOrder`) — ring position 1 is
+ * the bottom, upright seat. By default that arrangement IS the engine's seat
+ * order; the scorekeeper can rearrange it to match players who swapped seats.
+ *
+ * Each player's seat COLOUR and SHAPE still come from their ENGINE seat, so their
+ * visual identity travels with them when they move round the ring. Everything
+ * with meaning — totals, the leader crown, who starts the next round — comes from
+ * the engine and is unaffected by the arrangement.
+ */
 function RingView({
   game,
   slots,
+  ringOrder,
   onNewRound,
 }: {
   game: GameState;
   slots: ReturnType<typeof ringSlots>;
+  /** Player ids in ring order; already reconciled against the current players. */
+  ringOrder: readonly string[];
   onNewRound: () => void;
 }) {
   const leaderId = leaderIdOf(game);
-  // Standings are in seat order; slots are in seat order too, so they align.
-  const rows = game.standings;
+  const rowById = new Map(game.standings.map((s) => [s.playerId, s]));
+  const rows = ringOrder
+    .map((id) => rowById.get(id))
+    .filter((row): row is StandingRow => row !== undefined);
 
   return (
     <div className="ring" data-testid="ring-view">
@@ -225,6 +307,7 @@ function RingView({
             key={row.playerId}
             className="chip"
             data-player={row.playerId}
+            data-ring-position={i + 1}
             data-starts-next={startsNext}
             data-eliminated={row.eliminated}
             style={{

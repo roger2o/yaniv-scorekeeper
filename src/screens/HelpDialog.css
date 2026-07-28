@@ -6,14 +6,12 @@
  * phone.
  */
 
+/* The fixed full-screen scrim + horizontal centring come from the shared
+   `.modal-backdrop` (modal.css), which this class is applied alongside. Only the
+   properties the two dialog surfaces set DIFFERENTLY live here, so the two class
+   names never conflict and their cascade order cannot matter. */
 .help-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
   align-items: flex-end;
-  justify-content: center;
-  background: var(--scrim);
   padding: 0;
   /* Respect notches / safe areas. */
   padding-top: env(safe-area-inset-top);

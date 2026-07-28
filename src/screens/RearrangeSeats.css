@@ -1,0 +1,115 @@
+/*
+ * Rearrange-seats mode. Mobile-first at 375px: one row per player, a position
+ * badge on the left, the name in the middle, and two 56px move buttons on the
+ * right. Fully token-driven so both themes skin it; press feedback, focus rings,
+ * hover-gating and reduced-motion all inherit from floor.css.
+ *
+ * Contrast (existing, already-measured theme tokens):
+ *   title / name      --ink on --surface-raised   Felt 6.2:1   Arcade ~12:1
+ *   lead / note       --ink-muted on --surface     Felt 7.4:1   Arcade 5.7:1
+ *   position badge    --accent-ink on --accent     Felt ~6:1    Arcade ~5.3:1
+ *   move buttons      --ink on --surface           Felt 8.5:1   Arcade ~14:1
+ * All clear the WCAG AA 4.5:1 small-text floor.
+ *
+ * The move buttons are outlined in --accent rather than --border so their edge
+ * clears the 3:1 non-text bar against the row they sit on (--accent vs
+ * --surface-raised: Felt 3.03:1, Arcade 4.79:1) — the neutral borders are only
+ * ~1.5:1 on the felt and would leave the control boundary indistinct.
+ */
+
+.rearrange__title {
+  font-size: 1.4rem;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+
+.rearrange__lead,
+.rearrange__note {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+.rearrange__list {
+  list-style: none;
+  margin: 8px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rearrange__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--surface-raised);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* The position each player will occupy around the ring. A number, not a colour. */
+.rearrange__pos {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.rearrange__who {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rearrange__name {
+  /* Long names wrap rather than truncate, so two similar names stay tellable
+     apart on a phone. */
+  overflow-wrap: anywhere;
+}
+
+.rearrange__moves {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+}
+
+/* Move controls are the primary controls of this screen, so they sit at the
+   project's 56px touch-target floor. */
+.rearrange__move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--accent);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.rearrange__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.rearrange__actions .btn {
+  flex: 1;
+  min-width: 130px;
+}

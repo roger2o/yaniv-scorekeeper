@@ -17,15 +17,23 @@
  *  - Tabs use the WAI-ARIA tabs pattern: role="tablist"/"tab"/"tabpanel",
  *    aria-selected, roving tabindex, and Left/Right/Home/End arrow-key nav.
  *
+ * Those dialog mechanics now live in the SHARED `useModalDialog` hook, so the
+ * confirmation dialog inherits exactly the same contract instead of re-inventing
+ * a weaker one. Only the tabs pattern and the Share behaviour are specific to
+ * this screen. Nothing about the markup, styling, or behaviour of this dialog
+ * changed in that extraction.
+ *
  * Share uses the Web Share API (navigator.share) where available — sharing the
  * app's own URL so the recipient can install it — and falls back to copying the
  * link to the clipboard, then to a visible link, so it degrades gracefully.
  */
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { HowToUse } from '../content/helpContent';
 import { HowToPlay } from '../content/helpContent';
+import { useModalDialog } from './useModalDialog';
 import '../content/helpProse.css';
+import './modal.css';
 import './HelpDialog.css';
 
 type TabId = 'use' | 'play';
@@ -34,10 +42,6 @@ const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: 'use', label: 'How to Use' },
   { id: 'play', label: 'How to Play' },
 ];
-
-/** Selectors for the focusable elements we trap focus among. */
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export interface HelpDialogProps {
   /** Called when the dialog requests to close (Escape, backdrop, close button). */
@@ -52,63 +56,20 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
   // affordances work. Null unless we're in that final fallback.
   const [shareFallbackUrl, setShareFallbackUrl] = useState<string | null>(null);
 
-  const dialogRef = useRef<HTMLDivElement | null>(null);
-  const titleId = useId();
   // Roving-tabindex refs for the tab buttons (arrow-key navigation).
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  // Shared dialog mechanics: aria wiring, focus-in/trap/return, Escape, and the
+  // backdrop-click handler. Focus opens on the FIRST TAB so keyboard users land
+  // inside the dialog on the content switcher.
+  const { titleId, backdropProps, dialogProps } = useModalDialog({
+    onClose,
+    initialFocus: () => tabRefs.current[0],
+  });
 
   // The app's own URL — what we share so the recipient can install it.
   const appUrl =
     typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
-
-  // --- Move focus into the dialog on open; return it to the trigger on close.
-  useEffect(() => {
-    const trigger = (typeof document !== 'undefined'
-      ? document.activeElement
-      : null) as HTMLElement | null;
-    // Focus the first tab so keyboard users land inside the dialog.
-    tabRefs.current[0]?.focus();
-    return () => {
-      // Return focus to whatever opened the dialog (the "?" button).
-      trigger?.focus?.();
-    };
-  }, []);
-
-  // --- Escape closes; trap Tab/Shift+Tab inside the dialog. -----------------
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const root = dialogRef.current;
-      if (!root) return;
-      // FOOTGUN (latent, intentional): `offsetParent !== null` is the cheap
-      // "is it visible" test, but it returns null for a `position: fixed`
-      // element EVEN WHEN VISIBLE. This dialog's focusables are all statically
-      // positioned, so it's correct today — but if a fixed-position control is
-      // ever added inside the dialog it would be silently excluded from the
-      // focus trap. Swap to a visibility check (e.g. getClientRects().length)
-      // if that happens.
-      const focusable = Array.from(
-        root.querySelectorAll<HTMLElement>(FOCUSABLE),
-      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
-      if (focusable.length === 0) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      const activeEl = document.activeElement as HTMLElement | null;
-      if (e.shiftKey && activeEl === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && activeEl === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    },
-    [onClose],
-  );
 
   // --- Tab arrow-key navigation (roving tabindex). --------------------------
   const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -157,22 +118,11 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
 
   return (
     <div
-      className="help-backdrop"
+      className="modal-backdrop help-backdrop"
       data-testid="help-backdrop"
-      onMouseDown={(e) => {
-        // Only a click directly on the backdrop (not the dialog) closes.
-        if (e.target === e.currentTarget) onClose();
-      }}
+      {...backdropProps}
     >
-      <div
-        ref={dialogRef}
-        className="help-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        data-testid="help-dialog"
-        onKeyDown={onKeyDown}
-      >
+      <div className="help-dialog" data-testid="help-dialog" {...dialogProps}>
         <div className="help-dialog__head">
           <div>
             <h2 id={titleId} className="help-dialog__title">

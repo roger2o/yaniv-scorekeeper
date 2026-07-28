@@ -23,6 +23,14 @@ import type { GameStateSlice, Screen } from './types';
  * Bump this whenever the persisted shape (`GameStateSlice`) changes in a
  * backward-incompatible way. Old saves with a different version are discarded
  * on load instead of being trusted.
+ *
+ * DELIBERATELY NOT BUMPED for the circle-view seating arrangement (`ringOrder`).
+ * That field is OPTIONAL and purely visual: a save written by any earlier build
+ * simply has no such field and loads normally, defaulting to the engine's seat
+ * order. Bumping the version would have silently DISCARDED every in-progress
+ * game on already-installed phones, which is unacceptable for an offline app
+ * that updates itself without asking. Only a genuinely incompatible change to
+ * the meaning of `settings`, `history`, or `screen` justifies a bump.
  */
 export const SCHEMA_VERSION = 1;
 
@@ -80,6 +88,11 @@ const VALID_SCREENS: ReadonlySet<Screen> = new Set<Screen>(['setup', 'play', 'en
  * could be hand-edited, truncated, or written by an older build. This guards
  * the engine's input contract at the storage boundary. It checks shape only;
  * the engine itself remains the authority on game-rule validity.
+ *
+ * NOTE: the optional, display-only `ringOrder` is deliberately NOT validated
+ * here. It is not engine input, and a bad value must never cost the player their
+ * game. It is sanitised separately (see `sanitizeRingOrder`) and anything
+ * unusable is simply dropped, falling back to the engine's seat order.
  */
 function isValidSlice(value: unknown): value is GameStateSlice {
   if (typeof value !== 'object' || value === null) return false;
@@ -133,6 +146,24 @@ function isValidSettings(value: unknown): value is GameSettings {
 }
 
 /**
+ * Sanitise the optional, DISPLAY-ONLY circle-view arrangement.
+ *
+ * Returns a list of ids only when the stored value is a non-empty array of
+ * strings; anything else (absent, null, a number, an object, an array with a
+ * non-string in it, an empty array) yields `undefined`, which the app reads as
+ * "use the engine's seat order". A bad arrangement is NEVER treated as a corrupt
+ * save — the game itself still loads. Deeper checks (unknown ids, duplicates,
+ * wrong length) are handled at render time, where the current player set is
+ * known (see screens/ringOrder.ts).
+ */
+function sanitizeRingOrder(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  if (value.length === 0) return undefined;
+  if (!value.every((id) => typeof id === 'string')) return undefined;
+  return value as string[];
+}
+
+/**
  * Load the persisted game. Never throws. On any failure or incompatibility it
  * returns a non-'ok' status so the caller can start fresh cleanly.
  */
@@ -182,7 +213,21 @@ export function loadGame(storage: Storage | null = defaultStorage()): LoadResult
     return { status: 'discarded', reason: 'saved game failed structural validation' };
   }
 
-  return { status: 'ok', state: envelope.state };
+  // Rebuild the slice from the fields we actually own, so any stray key a future
+  // (or hand-edited) save carries is dropped rather than handed to the app.
+  const state: GameStateSlice = {
+    settings: envelope.state.settings,
+    history: envelope.state.history,
+    screen: envelope.state.screen,
+  };
+  const ringOrder = sanitizeRingOrder(
+    (envelope.state as { ringOrder?: unknown }).ringOrder,
+  );
+  // Only attach the key when there is a real arrangement, so a save written by
+  // an older build round-trips in its original three-field shape.
+  if (ringOrder !== undefined) state.ringOrder = ringOrder;
+
+  return { status: 'ok', state };
 }
 
 /**

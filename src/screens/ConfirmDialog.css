@@ -1,0 +1,63 @@
+/*
+ * Confirmation dialog — a small centred panel on the shared modal backdrop
+ * (see modal.css). Fully token-driven so it skins correctly in both themes; all
+ * press feedback, focus rings, hover-gating and reduced-motion handling come
+ * from floor.css.
+ *
+ * Contrast (both pairs are existing, already-measured theme tokens):
+ *   body/title  --ink on --surface          Felt 7.4:1   Arcade ~12:1
+ *   confirm     --danger-ink on --danger    Felt 5.06:1  Arcade 4.69:1
+ *   cancel      --ink on --surface-raised   Felt 6.2:1   Arcade ~12:1
+ * All clear the WCAG AA 4.5:1 small-text floor.
+ */
+
+.confirm-backdrop {
+  align-items: center;
+  /* Respect notches, but never let a safe-area of 0 collapse the gutter. */
+  padding: max(16px, env(safe-area-inset-left)) 16px
+    max(16px, env(safe-area-inset-bottom));
+  padding-top: max(16px, env(safe-area-inset-top));
+}
+
+.confirm-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  padding: 20px 18px 18px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.confirm-dialog__title {
+  font-size: 1.3rem;
+  color: var(--ink);
+}
+
+.confirm-dialog__body {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Both actions stay at the 56px primary-control floor (inherited from .btn) and
+   share the width evenly; on a 375px phone they sit side by side, and wrap to
+   full width only if a label is long. */
+.confirm-dialog__actions .btn {
+  flex: 1;
+  min-width: 150px;
+}

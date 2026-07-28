@@ -29,6 +29,24 @@ export interface GameStateSlice {
   history: RoundEntry[];
   /** Current screen marker. */
   screen: Screen;
+  /**
+   * DISPLAY-ONLY seating arrangement for the CIRCLE view: player ids in the
+   * order chips are placed around the ring. Set when the scorekeeper rearranges
+   * the ring to match players who physically swapped seats.
+   *
+   * ABSENT (undefined) means "use the engine's seat order" — which is exactly
+   * what every game saved BEFORE this feature existed looks like, so those saves
+   * keep loading normally. The field is OPTIONAL precisely so no schema-version
+   * bump (which would discard in-progress games on already-installed phones) is
+   * needed.
+   *
+   * This is a view preference, not game data: it never reaches the scoring
+   * engine, never affects who starts the next round or any tie-break, and never
+   * reorders the Big Board scoresheet columns. It is reconciled against the
+   * current player set at render time (see screens/ringOrder.ts) rather than
+   * trusted, because players can join or be removed after it was saved.
+   */
+  ringOrder?: string[];
 }
 
 /**

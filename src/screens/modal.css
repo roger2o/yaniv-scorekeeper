@@ -1,0 +1,19 @@
+/*
+ * SHARED modal backdrop — the dimmed scrim every dialog sits on.
+ *
+ * Deliberately narrow: it carries ONLY the properties both dialog surfaces agree
+ * on (fixed full-screen scrim, horizontally centred flex container). Anything the
+ * two surfaces set differently — vertical alignment and padding — stays in each
+ * dialog's own stylesheet, so the two class names never fight and the cascade
+ * order between them cannot matter.
+ *
+ * The scrim colour is the per-theme `--scrim` token (no hardcoded black).
+ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  background: var(--scrim);
+}

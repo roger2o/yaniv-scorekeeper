@@ -171,6 +171,32 @@ describe('Help — keyboard accessibility & focus management', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * The dialog mechanics are now shared with the confirmation dialog
+   * (useModalDialog). These guard that the extraction did not weaken the trap —
+   * in particular that the INACTIVE tab panel (rendered but `hidden`) stays out
+   * of the focus cycle.
+   */
+  it('cycles Tab within the dialog, skipping the hidden tab panel', () => {
+    renderDialogStandalone();
+    const dialog = screen.getByRole('dialog');
+    const hiddenPanel = document.getElementById('help-panel-play');
+    expect(hiddenPanel?.hasAttribute('hidden')).toBe(true);
+
+    const close = screen.getByRole('button', { name: 'Close help' });
+    const share = screen.getByRole('button', { name: /Share this app/i });
+
+    // Tab from the LAST focusable wraps to the FIRST (never out of the dialog).
+    act(() => share.focus());
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(document.activeElement).toBe(close);
+
+    // Shift+Tab from the FIRST wraps to the LAST — the hidden panel is not it.
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(share);
+    expect(document.activeElement).not.toBe(hiddenPanel);
+  });
+
   it('returns focus to the "?" trigger when the dialog closes', () => {
     renderSetup();
     const trigger = screen.getByTestId('help-button');

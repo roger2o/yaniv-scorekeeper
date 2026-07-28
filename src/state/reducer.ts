@@ -41,6 +41,14 @@ export type Action =
   | { type: 'UNDO_LAST_ROUND' }
   /** Replace the most recent round (edit). No-op if history is empty. */
   | { type: 'EDIT_LAST_ROUND'; round: RoundEntry }
+  /**
+   * Set (or clear) the DISPLAY-ONLY circle-view seating arrangement. Pass
+   * `undefined` to clear it, which means "fall back to the engine's seat order"
+   * and keeps the saved game in the pre-feature format. This never touches the
+   * engine's inputs — settings and history are untouched — so scoring, who
+   * starts the next round, and the scoresheet column order cannot change.
+   */
+  | { type: 'SET_RING_ORDER'; order: string[] | undefined }
   /** Manually end the game (move to the end screen). */
   | { type: 'END_GAME' }
   /** Reset everything back to a clean setup screen. */
@@ -58,13 +66,18 @@ export const initialState: AppState = {
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
-    case 'START_GAME':
-      return {
+    case 'START_GAME': {
+      // A fresh game starts on the engine's seat order: drop any circle-view
+      // arrangement left over from the previous game.
+      const next: AppState = {
         ...state,
         settings: action.settings,
         history: [],
         screen: 'play',
       };
+      delete next.ringOrder;
+      return next;
+    }
 
     case 'ADD_PLAYER':
       // Guard: only meaningful once a game exists. The reducer does NOT validate
@@ -91,10 +104,17 @@ export function reducer(state: AppState, action: Action): AppState {
         // Re-pack seats so they stay contiguous {0..n-1} after the removal.
         .sort((a, b) => a.seat - b.seat)
         .map((p, i) => ({ ...p, seat: i }));
-      return {
+      const next: AppState = {
         ...state,
         settings: { ...state.settings, players: remaining },
       };
+      // Keep the circle-view arrangement from carrying a player who has left.
+      // (Render-time reconciliation would also drop them; this just stops a
+      // stale id being persisted.)
+      if (state.ringOrder !== undefined) {
+        next.ringOrder = state.ringOrder.filter((id) => id !== action.playerId);
+      }
+      return next;
     }
 
     case 'ADD_ROUND':
@@ -120,6 +140,20 @@ export function reducer(state: AppState, action: Action): AppState {
         ...state,
         history: [...state.history.slice(0, -1), action.round],
       };
+
+    case 'SET_RING_ORDER': {
+      // Only meaningful once a game exists.
+      if (state.settings === null) return state;
+      const next: AppState = { ...state };
+      if (action.order === undefined) {
+        // Clearing removes the key entirely, so the saved game goes back to the
+        // exact pre-feature shape rather than carrying an empty marker.
+        delete next.ringOrder;
+      } else {
+        next.ringOrder = [...action.order];
+      }
+      return next;
+    }
 
     case 'END_GAME':
       // Only meaningful mid-game; otherwise leave state untouched.

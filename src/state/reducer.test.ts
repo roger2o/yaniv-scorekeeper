@@ -125,3 +125,85 @@ describe('reducer — end / restore / warning', () => {
     expect(Object.keys(s).sort()).toEqual(['history', 'screen', 'settings', 'storageWarning']);
   });
 });
+
+/**
+ * The DISPLAY-ONLY circle-view arrangement. It lives beside the source-of-truth
+ * but is not part of it: setting it must not touch settings or history, because
+ * those are the engine's inputs and the arrangement must never change scoring.
+ */
+describe('reducer — circle-view seating arrangement (display only)', () => {
+  it('SET_RING_ORDER stores the order without touching settings or history', () => {
+    let s = reducer(initialState, { type: 'START_GAME', settings: makeSettings() });
+    s = reducer(s, { type: 'ADD_ROUND', round: r1 });
+    const before = s;
+
+    const after = reducer(s, { type: 'SET_RING_ORDER', order: ['c', 'a', 'b'] });
+    expect(after.ringOrder).toEqual(['c', 'a', 'b']);
+    // The engine's inputs are the SAME OBJECTS — untouched, not merely equal.
+    expect(after.settings).toBe(before.settings);
+    expect(after.history).toBe(before.history);
+    expect(after.screen).toBe(before.screen);
+  });
+
+  it('SET_RING_ORDER with undefined removes the key entirely (back to the old shape)', () => {
+    let s = reducer(initialState, { type: 'START_GAME', settings: makeSettings() });
+    s = reducer(s, { type: 'SET_RING_ORDER', order: ['c', 'b', 'a'] });
+    expect('ringOrder' in s).toBe(true);
+
+    s = reducer(s, { type: 'SET_RING_ORDER', order: undefined });
+    expect('ringOrder' in s).toBe(false);
+    expect(Object.keys(s).sort()).toEqual([
+      'history',
+      'screen',
+      'settings',
+      'storageWarning',
+    ]);
+  });
+
+  it('SET_RING_ORDER is a no-op before a game has started', () => {
+    const s = reducer(initialState, { type: 'SET_RING_ORDER', order: ['a'] });
+    expect(s.ringOrder).toBeUndefined();
+  });
+
+  it('copies the order in, so a later caller mutation cannot reach the store', () => {
+    const started = reducer(initialState, {
+      type: 'START_GAME',
+      settings: makeSettings(),
+    });
+    const order = ['c', 'a', 'b'];
+    const s = reducer(started, { type: 'SET_RING_ORDER', order });
+    order.push('intruder');
+    expect(s.ringOrder).toEqual(['c', 'a', 'b']);
+  });
+
+  it('a NEW game starts on the engine seat order (no arrangement carried over)', () => {
+    let s = reducer(initialState, { type: 'START_GAME', settings: makeSettings() });
+    s = reducer(s, { type: 'SET_RING_ORDER', order: ['c', 'b', 'a'] });
+    s = reducer(s, { type: 'START_GAME', settings: makeSettings() });
+    expect(s.ringOrder).toBeUndefined();
+  });
+
+  it('RESET_GAME clears the arrangement', () => {
+    let s = reducer(initialState, { type: 'START_GAME', settings: makeSettings() });
+    s = reducer(s, { type: 'SET_RING_ORDER', order: ['c', 'b', 'a'] });
+    s = reducer(s, { type: 'RESET_GAME' });
+    expect(s.ringOrder).toBeUndefined();
+  });
+
+  it('removing a player drops them from the arrangement (no stale id persisted)', () => {
+    const settings = makeSettings();
+    let s = reducer(initialState, {
+      type: 'START_GAME',
+      settings: {
+        ...settings,
+        players: [
+          ...settings.players,
+          { id: 'd', name: 'Dee', seat: 3, joinsBeforeRoundIndex: 1 },
+        ],
+      },
+    });
+    s = reducer(s, { type: 'SET_RING_ORDER', order: ['d', 'c', 'a', 'b'] });
+    s = reducer(s, { type: 'REMOVE_PLAYER', playerId: 'd' });
+    expect(s.ringOrder).toEqual(['c', 'a', 'b']);
+  });
+});
