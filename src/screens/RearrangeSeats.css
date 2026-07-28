@@ -22,11 +22,14 @@
  *      The bar is kept to ONE row (see the note on its own rule below), because a
  *      permanently-visible bar is a permanent tax on the list's height.
  *   3. The action row is ALSO `position: sticky; bottom: 0` with an opaque
- *      background. That is inert while (2) holds — nothing overflows the frame,
- *      so there is nothing to stick to — and exists only as a fallback for the
- *      case where the page as a whole ends up scrolling instead. Nothing in the
- *      ancestor chain clips (html, body and #root are height:100% with visible
- *      overflow), so the document is the scrollport in that case.
+ *      background, for the case where the page as a whole scrolls rather than the
+ *      list. Nothing in the ancestor chain clips (html, body and #root are
+ *      height:100% with visible overflow), so the document is the scrollport then.
+ *      This is NOT dead code, and specifically not on iOS Safari in a browser tab:
+ *      there `height: 100%` resolves against the LARGE viewport, so with the bottom
+ *      toolbar showing the frame is taller than the visible area and the page really
+ *      does scroll — which is exactly the configuration the preview will be reviewed
+ *      in (a Safari tab, not an installed app).
  * NOTE: jsdom has no layout engine, so no test in this repo can verify any of
  * this. It wants a real-device check at 375px with 4, 5 and 6 players.
  *
@@ -177,16 +180,25 @@
 /* Sticky footer: always reachable, whatever the player count.
    The negative horizontal margins (cancelled by matching padding) let the opaque
    bar span the full frame width. Without them the .app-frame's 16px gutters would
-   stay transparent and player rows would be seen scrolling through them. */
+   stay transparent and player rows would be seen scrolling through them.
+
+   NO safe-area inset here. This used to add `max(10px, env(safe-area-inset-bottom))`
+   as bottom padding, which DOUBLE-COUNTS: floor.css already applies the safe-area
+   insets as padding on <body>, so the whole frame — and therefore this bar — is
+   already clear of the home indicator. On a notched iPhone the extra inset pushed a
+   ~78px bar to ~102px, and since this bar is permanently visible that was a
+   permanent 24px stolen from the list it exists to protect. Sticky `bottom: 0` is
+   clamped by the containing block, which is inside the padded body, so it still
+   cannot slide under the indicator. */
 .rearrange__actions {
   position: sticky;
   bottom: 0;
   z-index: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   margin: 4px -16px 0;
-  padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+  padding: 10px 16px;
   background: var(--surface);
   border-top: 2px solid var(--border-strong);
 }
@@ -195,13 +207,32 @@
    Three buttons at a 130px minimum could not fit the ~343px frame (3 x 130 + 2 x 10
    gap = 410px), so the bar wrapped onto two rows and stood roughly 145px tall
    against ~560px of usable height on the smallest phone — squeezing the very list
-   it exists to protect. These share the row instead: no minimum, tighter padding,
-   a slightly smaller face, and labels kept short enough not to wrap. That is one
-   row, about 78px. */
+   it exists to protect. These share the row instead: no minimum, tight padding and
+   a smaller face. That is one row, about 78px.
+
+   HEADROOM, measured for the worst case (Arcade / Baloo 2, which is the wider of
+   the two display faces). At 375px each button gets ~109px, leaving ~97px of text
+   box after padding; at 360px — a common Android width — ~103px and ~91px. The
+   longest label, "Reset order", renders around 82px at 0.85rem. So there is real
+   headroom rather than the ~0px the previous 0.9rem/8px combination left. */
 .rearrange__actions .btn {
   flex: 1 1 0;
   min-width: 0;
-  padding: 0 8px;
-  font-size: 0.9rem;
+  padding: 0 6px;
+  font-size: 0.85rem;
+}
+
+/* Belt and braces for the label itself. If a face renders wider than measured, the
+   text must fail CLEANLY — truncated inside its own button — rather than spilling
+   across the neighbouring one, which is what bare `white-space: nowrap` on the
+   button would have done. The ellipsis needs a block-level box of its own, which is
+   why the labels are wrapped in a span: `text-overflow` does nothing on the
+   anonymous text child of a flex container. */
+.rearrange__actions-label {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }

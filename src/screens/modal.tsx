@@ -56,36 +56,55 @@ import { createPortal } from 'react-dom';
 /**
  * SHARED freeze bookkeeping, module-level on purpose.
  *
- * Every layer used to snapshot "what the page looked like before me" and restore
- * that on close. With two layers open that is wrong in a way that cannot be
- * recovered from: if the OUTER one closes first, the inner one's snapshot holds
- * the ALREADY-FROZEN values, so its "restore" re-freezes the page. The app is
- * then left permanently hidden from assistive tech and permanently scroll-locked
- * with no dialog open, and no further open/close cycle undoes it. On an installed
- * offline PWA there is nothing the player can do about that.
+ * TWO faults have been fixed here, both of the same class, and both able to leave
+ * an installed offline PWA permanently hidden from assistive tech and permanently
+ * scroll-locked with no dialog open — a state the player cannot recover from.
  *
- * It was not reachable, because opening a second dialog means pressing a control
- * the first has already made inert and covered with a scrim. But the only thing
- * preventing it was the very lock whose bookkeeping was broken, which is an
- * accident rather than a design, and it would go live the moment anyone added a
- * nested confirmation or a toast.
+ * FIRST: each layer used to snapshot "what the page looked like before me" and
+ * restore that on close. With two layers open and the OUTER one closing first, the
+ * inner one's snapshot held the ALREADY-FROZEN values, so its "restore" re-froze
+ * the page for good.
  *
- * So the true page state is captured EXACTLY ONCE, when the first layer opens,
- * and restored EXACTLY ONCE, when the last one closes — whatever order they close
- * in. Between those points the freeze is simply re-applied so that whichever layer
- * is on top is the one left interactive.
+ * SECOND, and subtler: making the snapshot shared but still capturing it at
+ * first-open only moved the problem. Anything frozen that was NOT in that snapshot
+ * was never released (a node a browser extension, password manager or Google
+ * Translate appends while a dialog is up), and a layer whose cleanup never ran left
+ * a freeze applied with nothing to release it — so the next dialog would capture
+ * the already-frozen page as the new "truth" and bake it in on close.
+ *
+ * THE SHAPE THAT FIXES BOTH: do not snapshot the page at all. Record, for each
+ * element, what it looked like immediately before WE froze IT — lazily, at the
+ * moment of freezing, and never overwritten. Then "restore" means "undo everything
+ * we ever did", which is by construction complete and order-independent:
+ *
+ *  - an element frozen late is recorded late, so it is released like any other;
+ *  - a re-freeze finds an existing record and leaves it alone, so an already-frozen
+ *    page can never be mistaken for the true one;
+ *  - a leaked layer therefore needs no special case: the records still hold the
+ *    truth from before it, and the next dialog to close properly restores it.
+ *
+ * That last point is why there is no "restore the stale snapshot before capturing a
+ * new one" step: with per-element records there is nothing stale to restore, because
+ * nothing is ever recaptured. The one thing this cannot fix is a leaked layer with
+ * NO later dialog — the page simply stays frozen — but that is a caller bug (a
+ * ModalLayer detached without unmounting) and there is nothing to hook to fix it.
  */
 const openLayers: HTMLElement[] = [];
 
-interface FrozenElement {
-  el: HTMLElement;
+interface PreFreezeState {
   ariaHidden: string | null;
   inert: boolean;
 }
 
-/** The page's true state, captured when the first layer opened. */
-let baseline: FrozenElement[] | null = null;
-let baselineOverflow = '';
+/**
+ * Page element -> what it looked like BEFORE we first froze it. Written once per
+ * element, on first freeze; cleared only when the last layer closes.
+ */
+const preFreeze = new Map<HTMLElement, PreFreezeState>();
+
+/** Body scroll lock, tracked separately since it is a single global. */
+let scrollLocked = false;
+let preLockOverflow = '';
 
 /** Layer containers are ours; everything else at the top level is "the page". */
 function isLayerContainer(el: Element): boolean {
@@ -108,13 +127,15 @@ function pruneDetached(): void {
 
 /**
  * Freeze everything except the topmost layer. Called whenever the set of open
- * layers changes, so the top layer is always the interactive one.
+ * layers changes, so the top layer is always the interactive one — and so anything
+ * that appeared since the last call gets frozen (and recorded) too.
  */
 function applyFreeze(): void {
   pruneDetached();
   const top = openLayers[openLayers.length - 1] ?? null;
   for (const child of Array.from(document.body.children)) {
     if (!(child instanceof HTMLElement)) continue;
+
     if (child === top) {
       // The active layer must never be frozen. Our own containers never carry
       // these attributes for any other reason, so clearing is safe.
@@ -122,25 +143,50 @@ function applyFreeze(): void {
       child.removeAttribute('inert');
       continue;
     }
+
+    // Other layer containers are frozen but deliberately NOT recorded: they are
+    // ours, they are transient, and "restoring" one is meaningless.
+    if (!isLayerContainer(child) && !preFreeze.has(child)) {
+      preFreeze.set(child, {
+        ariaHidden: child.getAttribute('aria-hidden'),
+        inert: child.hasAttribute('inert'),
+      });
+    }
     child.setAttribute('aria-hidden', 'true');
     child.setAttribute('inert', '');
   }
 }
 
+/** Undo everything we ever froze, and unlock scrolling. */
+function thawAll(): void {
+  for (const [el, previous] of preFreeze) {
+    if (previous.ariaHidden === null) el.removeAttribute('aria-hidden');
+    else el.setAttribute('aria-hidden', previous.ariaHidden);
+    // Symmetric on purpose. `applyFreeze` never clears `inert` on a page element,
+    // so re-setting it is currently unobservable — but an asymmetric restore is
+    // exactly how a future tidy-up would turn a lesser fault into total loss of
+    // function, so the symmetry stays.
+    if (previous.inert) el.setAttribute('inert', '');
+    else el.removeAttribute('inert');
+  }
+  preFreeze.clear();
+
+  if (scrollLocked) {
+    document.body.style.overflow = preLockOverflow;
+    preLockOverflow = '';
+    scrollLocked = false;
+  }
+}
+
 function acquireFreeze(container: HTMLElement): void {
   pruneDetached();
-  if (openLayers.length === 0) {
-    baseline = Array.from(document.body.children)
-      .filter(
-        (el): el is HTMLElement => el instanceof HTMLElement && !isLayerContainer(el),
-      )
-      .map((el) => ({
-        el,
-        ariaHidden: el.getAttribute('aria-hidden'),
-        inert: el.hasAttribute('inert'),
-      }));
-    baselineOverflow = document.body.style.overflow;
+  // Note the lock is keyed on `scrollLocked`, not on the layer count: if a leaked
+  // layer left the page locked, the true pre-lock value is still held here and
+  // must not be overwritten with the locked one.
+  if (!scrollLocked) {
+    preLockOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    scrollLocked = true;
   }
   openLayers.push(container);
   applyFreeze();
@@ -156,19 +202,7 @@ function releaseFreeze(container: HTMLElement): void {
     applyFreeze();
     return;
   }
-
-  // Last layer closing: restore the page exactly as it was, symmetrically for
-  // BOTH attributes (an asymmetric restore is how a "tidy-up" would turn this
-  // into total loss of function rather than a lesser one).
-  for (const { el, ariaHidden, inert } of baseline ?? []) {
-    if (ariaHidden === null) el.removeAttribute('aria-hidden');
-    else el.setAttribute('aria-hidden', ariaHidden);
-    if (inert) el.setAttribute('inert', '');
-    else el.removeAttribute('inert');
-  }
-  baseline = null;
-  document.body.style.overflow = baselineOverflow;
-  baselineOverflow = '';
+  thawAll();
 }
 
 /**

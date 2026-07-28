@@ -135,7 +135,9 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
   const useSetupOrder = () => {
     const next = [...seatOrderIds];
     setDraft(next);
-    announce(`Back to the setup order: ${namesOf(next)}.`);
+    // Spoken form stays explicit about WHAT is reset; the button label has to be
+    // short enough to keep the action bar on one row.
+    announce(`Reset to the setup order: ${namesOf(next)}.`);
   };
 
   const save = () => {
@@ -256,19 +258,23 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
         the next round stay exactly as they are.
       </p>
 
+      {/* Only "Save order" wears the accent, so the one committing action is
+          unmistakable. Cancel and Reset order are both quiet/grey: putting an
+          accent-outlined button next to the accent-FILLED one reads as "the same
+          action, one just outlined", which is the last thing this pair can afford.
+          "Reset order" rather than "Setup order": shortening the original label
+          fixed the two-row bar but left it sharing an initial letter, a second
+          word, a word count and a rendered width with "Save order", on a control
+          tapped mid-game. "Reset" restores the distinction at the same width. */}
       <div className="rearrange__actions">
-        <button type="button" className="btn btn--secondary" onClick={onDone}>
-          Cancel
+        <button type="button" className="btn btn--ghost" onClick={onDone}>
+          <span className="rearrange__actions-label">Cancel</span>
         </button>
-        {/* "Setup order", not "Back to the setup order": the long label forced the
-            permanently-visible bar onto two rows, which ate the list this bar
-            exists to keep usable. Short, and still clearly distinct from
-            "Save order". */}
         <button type="button" className="btn btn--ghost" onClick={useSetupOrder}>
-          Setup order
+          <span className="rearrange__actions-label">Reset order</span>
         </button>
         <button type="button" className="btn btn--primary" onClick={save}>
-          Save order
+          <span className="rearrange__actions-label">Save order</span>
         </button>
       </div>
     </div>

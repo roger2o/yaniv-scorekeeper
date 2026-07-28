@@ -114,8 +114,13 @@ export function EndGameScreen() {
           the whole screen to find out what happened. The winner block is the
           right landing point because it IS the answer to "what happened".
           (A proper page <h1> would be better still, but the missing headings on
-          sub-screens are an app-wide gap being handled separately.) */}
-      <div className="end__crown" role="status" ref={crownRef} tabIndex={-1}>
+          sub-screens are an app-wide gap being handled separately.)
+
+          NO role="status" here. It used to carry one, but combined with receiving
+          focus that makes VoiceOver announce the winner twice — once as a live
+          region and again as the newly-focused element. Moving focus already reads
+          it, so the live region is redundant. */}
+      <div className="end__crown" ref={crownRef} tabIndex={-1}>
         <span className="end__trophy" aria-hidden="true">
           🏆
         </span>

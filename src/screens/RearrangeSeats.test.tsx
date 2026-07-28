@@ -139,6 +139,40 @@ describe('Rearrange seats — entering and leaving the mode', () => {
     expect(panel.textContent?.toLowerCase()).not.toContain('deals');
   });
 
+  it('gives the accent to "Save order" ALONE, so the committing action is unmistakable', () => {
+    renderPlay(ONE_ROUND);
+    const panel = openRearrange();
+    const bar = panel.querySelector<HTMLElement>('.rearrange__actions')!;
+
+    // An accent-OUTLINED button beside the accent-FILLED one reads as "the same
+    // action, one is just outlined" — unacceptable on Cancel/Reset next to Save.
+    const primaries = bar.querySelectorAll('.btn--primary');
+    expect(primaries.length).toBe(1);
+    expect(primaries[0]!.textContent).toMatch(/Save order/);
+    expect(bar.querySelectorAll('.btn--secondary').length).toBe(0);
+
+    // Cancel and Reset order are both the quiet variant.
+    for (const name of [/^Cancel$/, /^Reset order$/]) {
+      expect(screen.getByRole('button', { name }).className).toContain('btn--ghost');
+    }
+  });
+
+  it('keeps the action labels truncatable so they cannot spill across each other', () => {
+    renderPlay(ONE_ROUND);
+    const panel = openRearrange();
+    const bar = panel.querySelector<HTMLElement>('.rearrange__actions')!;
+    // Each label is its own block-level box; `text-overflow` does nothing on the
+    // anonymous text child of a flex container, so without the span a wider font
+    // face would spill the label over the neighbouring button rather than clip.
+    const labels = bar.querySelectorAll('.rearrange__actions-label');
+    expect(labels.length).toBe(3);
+    expect(Array.from(labels).map((l) => l.textContent)).toEqual([
+      'Cancel',
+      'Reset order',
+      'Save order',
+    ]);
+  });
+
   it('CANCEL restores the arrangement as it was on entering the mode', () => {
     renderPlay(ONE_ROUND);
 
@@ -158,7 +192,7 @@ describe('Rearrange seats — entering and leaving the mode', () => {
     expect(screen.getByTestId('stored-ring-order').textContent).toBe('b,a,c,d');
   });
 
-  it('"Setup order" resets the draft and stores nothing', () => {
+  it('"Reset order" resets the draft and stores nothing', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
     fireEvent.click(screen.getByTestId('move-later-a'));
@@ -166,7 +200,7 @@ describe('Rearrange seats — entering and leaving the mode', () => {
     expect(screen.getByTestId('stored-ring-order').textContent).toBe('b,a,c,d');
 
     openRearrange();
-    fireEvent.click(screen.getByRole('button', { name: /^Setup order$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Reset order$/ }));
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
 
     expect(ringOrderOnScreen()).toEqual(['a', 'b', 'c', 'd']);
@@ -256,14 +290,14 @@ describe('Rearrange seats — accessible move controls (buttons, not gestures)',
     renderPlay(ONE_ROUND);
     const panel = openRearrange();
     const live = panel.querySelector('[role="status"]') as HTMLElement;
-    const reset = screen.getByRole('button', { name: /^Setup order$/ });
+    const reset = screen.getByRole('button', { name: /^Reset order$/ });
 
     fireEvent.click(reset);
     const first = live.textContent;
     fireEvent.click(reset);
     const second = live.textContent;
     // Same message, but the DOM text must DIFFER or a screen reader stays quiet.
-    expect(second).toMatch(/Back to the setup order/);
+    expect(second).toMatch(/Reset to the setup order/);
     expect(second).not.toBe(first);
   });
 

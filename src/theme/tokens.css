@@ -25,6 +25,9 @@
  *   --accent-soft        a soft accent wash (selected fields, highlights)
  *   --danger             Assaf / destructive (warm red)
  *   --danger-ink         text on danger
+ *   --danger-edge        border on a destructive button — per-theme, because the
+ *                        red fill delineates the button on the LIGHT theme but
+ *                        not on the dark one (see each theme's note)
  *   --celebrate          halving / win celebration colour
  *   --border             card borders, dividers
  *   --border-strong      stronger dividers, focus context
@@ -56,6 +59,12 @@
   --accent-soft: #3a6f5c; /* soft brass-tinted felt wash */
   --danger: #b3382f; /* warm red (darkened so ivory-on-danger clears WCAG AA) */
   --danger-ink: #f4ecd8; /* ivory on red (~5.06:1, clears 4.5:1 AA) */
+  /* A destructive button NEEDS a border on the felt: the red fill is only 1.67:1
+     against the page surface and 1.23:1 against a raised card, so on its own it
+     does not delineate the control. The brass accent gives it a real edge —
+     4.12:1 on the page, 3.03:1 on a card — both clearing the 3:1 non-text bar,
+     without becoming the brightest line on the screen (ivory would be 8.47:1). */
+  --danger-edge: #c9a227; /* = --accent; brass edge on red */
   /* WARNING surface — louder than --accent-soft, for the single install-critical
      "you must use Safari on iPhone" callout. A saturated amber pill with dark
      warm ink and a deep-brown heavy border so it out-weights every other box.
@@ -120,6 +129,13 @@
   --accent-soft: #ece4fb; /* soft grape wash for selected fields */
   --danger: #d23b2e; /* coral-red */
   --danger-ink: #fffdf8;
+  /* On the LIGHT theme the coral fill delineates the button by itself — 4.43:1
+     against the page surface, 4.69:1 against a card — so no border is needed. It
+     is set to the fill colour rather than removed so the 2px edge from .btn still
+     reserves its space and every theme defines every token. A contrasting edge
+     here would be actively worse: the grape accent measures just 1.04:1 against
+     the coral, i.e. invisible as a boundary and visible only as a muddy fringe. */
+  --danger-edge: #d23b2e; /* = --danger; no visible border on the light theme */
   /* WARNING surface — see Theme A note. On the light arcade card the amber fill
      alone doesn't separate (1.61:1), so the louder coral-red --danger BORDER
      does the delineation; reinforced by the ⚠ glyph + "Important".

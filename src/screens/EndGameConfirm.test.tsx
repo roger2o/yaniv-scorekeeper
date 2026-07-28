@@ -184,38 +184,21 @@ describe('End game — confirming ends it exactly as before', () => {
   });
 });
 
-describe('End game — the shared freeze registry is self-healing', () => {
-  it('a dialog still works after a previous layer container was ripped out', () => {
-    renderPlay();
-    fireEvent.click(endGameTrigger());
-    const layer = document.querySelector('.modal-layer')!;
-
-    // Simulate the one way the module-level registry could go stale: a container
-    // leaving the document WITHOUT its cleanup running (a test teardown that
-    // sweeps the DOM, a stray removeChild). The registry must not be poisoned by
-    // it, because a detached "top layer" would match nothing and the freeze would
-    // then be applied to the whole page including the live dialog.
-    layer.remove();
-    // The portal's DOM went with it, so the dialog is dismissed with Escape (a
-    // document-level listener, still live) rather than by clicking a button that
-    // no longer exists.
-    fireEvent.keyDown(document.body, { key: 'Escape' });
-    expect(screen.queryByTestId('confirm-end-game')).toBeNull();
-
-    // A fresh cycle behaves normally: frozen while open, fully thawed after.
-    fireEvent.click(endGameTrigger());
-    const shells = Array.from(document.body.children).filter(
-      (el) => !el.classList.contains('modal-layer'),
-    );
-    for (const el of shells) expect(el.hasAttribute('inert')).toBe(true);
-    expect(document.activeElement).toBe(screen.getByTestId('confirm-end-game-cancel'));
-
-    fireEvent.click(screen.getByTestId('confirm-end-game-cancel'));
-    for (const el of shells) expect(el.hasAttribute('inert')).toBe(false);
-    expect(document.body.style.overflow).toBe('');
-    expect(screen.getByTestId('screen').textContent).toBe('play');
-  });
-});
+/*
+ * The "self-healing registry" test that used to sit here has been REMOVED, not
+ * relaxed. It claimed to simulate a layer whose cleanup never runs, but it only
+ * removed the container from the DOM — React still ran the cleanup, so
+ * `releaseFreeze` was still called with the same reference and the registry never
+ * actually went stale. Bugsy proved the point by deleting the entire body of
+ * `pruneDetached`: the test still passed. A guard that survives the deletion of the
+ * code it guards is worse than no guard, because it reports safety it is not
+ * measuring.
+ *
+ * The property is genuinely covered in v11NestedFreeze.adversarial.test.tsx, which
+ * mounts an orphan ModalLayer in its OWN React root and detaches it without
+ * unmounting — the only way to reach the cleanup-never-runs state — and which does
+ * fail when pruneDetached is gutted.
+ */
 
 describe('End game — focus is never returned into a frozen background', () => {
   /**
@@ -280,6 +263,9 @@ describe('End game — focus is never returned into a frozen background', () => 
     expect(document.activeElement).not.toBe(document.body);
     const active = document.activeElement as HTMLElement;
     expect(active.className).toContain('end__crown');
+    // NOT also a live region: carrying role="status" AND focus makes VoiceOver
+    // announce the winner twice. Moving focus already reads it.
+    expect(active.getAttribute('role')).toBeNull();
     // And what it announces is the answer to "what just happened".
     expect(active.textContent).toMatch(/Winner/i);
     // Nothing is left frozen behind a dialog that no longer exists.
