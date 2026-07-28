@@ -144,7 +144,7 @@ The public page on the same static URL the app is distributed from. It's where e
 ## Phase 11 — Accessibility & UI Polish (Twiggy)
 - [x] WCAG 2.1 AA: contrast, large tap targets, focus-visible, semantic structure — *built and held to the AA floor throughout; reviewed by Twiggy/Holmes*
 - [x] Press feedback on every control; `:hover` gated to hover devices; `prefers-reduced-motion`
-- [~] Across-table legibility test at 375px held at arm's length; landscape + one-handed reach — *eyeball-confirmed by Roger on his own phone (offline confirmed); not yet a formal team device-test pass. Deferred follow-up, not a gap (see PROJECT.md).*
+- [x] Across-table legibility test at 375px held at arm's length; landscape + one-handed reach. *Closed 2026-07-29 by Roger's own device-test pass. Roger performed the device testing himself and considers the item closed; Twiggy and the agent team did not run a separate formal pass.*
 - [x] Palette discipline (tinted neutrals, high-contrast theme for harsh light)
 
 ---
@@ -166,5 +166,37 @@ Depends on Phase 10 + Phase 12.
 
 ---
 
+## Phase 14 — v1.1 Features
+The first release after v1.0. Two additions Roger approved on 2026-07-29: a confirmation step before a game can be ended, and the ability to rearrange the circular table view so the ring matches where people are actually sitting. Depends on the shipped v1.0 app.
+
+**Scope guard for the whole phase:** the seat rearrangement is **display-only and circle-view-only**. The scoring engine's seat order, the round-history model, the recompute-from-history guarantee, and the vertical scoresheet's column order are all deliberately left alone (reasoning in PROJECT.md Resolved Decisions, 2026-07-29).
+
+### Build (Turing)
+- [ ] Confirmation step before "End game" ends a game: a clear "Are you sure?" with an obvious way to cancel and carry on playing
+- [ ] Confirmation copy says plainly that ending a game cannot be undone
+- [ ] Confirmation meets the project's accessibility floor (56px targets, focus handling, Escape to cancel, screen-reader labelling), reusing the existing Help-dialog pattern rather than a new one
+- [ ] No route ends a game without passing through the confirmation
+- [ ] Circle-view control to rearrange the ring so the on-screen order matches the physical table
+- [ ] The rearranged order is saved with the game (a per-game display preference), so a refresh does not lose it
+- [ ] Engine seat order untouched: who starts the next round, and the multiple-catcher tie-break, keep ranking by the original seat order
+- [ ] Vertical scoresheet (Big Board) keeps its columns in the original seat order for the whole game
+- [ ] Rearranging the ring can never alter a past round; the round history stays the single source of truth
+
+### Tests (Bugsy)
+- [ ] End-game confirmation: cancelling leaves the game running untouched, confirming ends it, and the game cannot be ended without confirming
+- [ ] Seat rearrangement: the ring order changes on screen, and the saved order survives a reload
+- [ ] Seat rearrangement does **not** change who starts the next round, the multiple-catcher tie-break, the round history, or the scoresheet column order
+- [ ] Regression check that v1.0 scoring behaviour is unchanged; full suite green plus a clean production build
+
+### Review & release
+- [ ] Holmes review of the v1.1 diff
+- [ ] Bugsy full test pass
+- [ ] Twiggy UX review: the confirmation's wording and prominence, and the rearrange interaction on a real phone including 5 and 6 players
+- [ ] Deploy via Wells (merge to `main` publishes automatically) and record the release
+
+---
+
 ## Current Focus
-**v1.0 shipped — live; deferred follow-ups noted.** Plan complete — see PROJECT.md `## Current Status` for the released state (live URL, public repo, the fingerprint-verified `v1.0` tag, and full shipped scope). Every phase is delivered. The only open items are explicitly **deferred, not gaps**: (a) the Vite/Vitest **dev-tooling security bump** — deferred by Roger's decision, dev-tooling only with no user exposure; (b) replacing the **placeholder app icon** with final art — a drop-in change, `public/icon.svg` is the editable source; and (c) a **formal team device-test pass** of the across-table UX — those items are eyeball-confirmed by Roger on his own phone (offline confirmed) but not yet formally device-tested by the team.
+**Phase 14, the v1.1 build.** v1.0 is live and Phases 0 to 13 are all delivered (see PROJECT.md `## Current Status` for the released state: live URL, public repo, and the fingerprint-verified `v1.0` tag). The plan has reopened for **v1.1**, approved by Roger on 2026-07-29: a confirmation step before "End game" ends a game, and a way to rearrange the circular table view so the ring matches where people are actually sitting. Turing builds; Holmes, Bugsy, and Twiggy review; Wells deploys. Nothing in Phase 14 is ticked yet, so every box there is genuinely outstanding.
+
+Two of the three items left over from v1.0 are now **closed**: Roger has accepted the current app icon as-is, and Roger has done the device-test pass himself. One item remains open, the Vite/Vitest **dev-tooling security bump**, still deferred by Roger's decision because it touches only the local build-and-test tooling and never the installed app.
