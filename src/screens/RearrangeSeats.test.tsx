@@ -158,7 +158,7 @@ describe('Rearrange seats — entering and leaving the mode', () => {
     expect(screen.getByTestId('stored-ring-order').textContent).toBe('b,a,c,d');
   });
 
-  it('"Original order" returns the draft to the engine seat order and stores nothing', () => {
+  it('"Back to the setup order" resets the draft and stores nothing', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
     fireEvent.click(screen.getByTestId('move-later-a'));
@@ -166,7 +166,7 @@ describe('Rearrange seats — entering and leaving the mode', () => {
     expect(screen.getByTestId('stored-ring-order').textContent).toBe('b,a,c,d');
 
     openRearrange();
-    fireEvent.click(screen.getByRole('button', { name: /Original order/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Back to the setup order/ }));
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
 
     expect(ringOrderOnScreen()).toEqual(['a', 'b', 'c', 'd']);
@@ -218,19 +218,53 @@ describe('Rearrange seats — accessible move controls (buttons, not gestures)',
     expect(document.activeElement).toBe(screen.getByTestId('move-earlier-a'));
   });
 
-  it('announces each move politely, naming the player and their new position', () => {
+  it('announces the starting order on entry, then each move concisely', () => {
     renderPlay(ONE_ROUND);
     const panel = openRearrange();
     const live = panel.querySelector('[role="status"]') as HTMLElement;
     expect(live.getAttribute('aria-live')).toBe('polite');
-    expect(live.textContent).toBe('');
+    // Entering reads the full order once — the overview is worth hearing here.
+    expect(live.textContent).toMatch(/Current order: Ann, Bo, Cy, Dee/);
+
+    // Per-move announcements are SHORT: re-reading the whole roster on every
+    // press would be unusable for a control tapped a dozen times.
+    fireEvent.click(screen.getByTestId('move-later-a'));
+    expect(live.textContent).toMatch(/Ann, position 2 of 4/);
+    expect(live.textContent).not.toMatch(/Bo, Ann, Cy, Dee/);
 
     fireEvent.click(screen.getByTestId('move-later-a'));
-    expect(live.textContent).toMatch(/Ann moved to position 2 of 4/);
-    expect(live.textContent).toMatch(/Order now: Bo, Ann, Cy, Dee/);
+    expect(live.textContent).toMatch(/Ann, position 3 of 4/);
+  });
 
+  it('says so when a move WRAPS round the ring, since the player travels the list', () => {
+    renderPlay(ONE_ROUND);
+    const panel = openRearrange();
+    const live = panel.querySelector('[role="status"]') as HTMLElement;
+
+    // Ann is at position 1; "earlier" wraps her to the last seat.
+    fireEvent.click(screen.getByTestId('move-earlier-a'));
+    expect(live.textContent).toMatch(/Ann moved round to position 4 of 4/);
+    expect(live.textContent).toMatch(/last seat before position 1/);
+
+    // And back round the other way, to the seat nearest the phone.
     fireEvent.click(screen.getByTestId('move-later-a'));
-    expect(live.textContent).toMatch(/Ann moved to position 3 of 4/);
+    expect(live.textContent).toMatch(/Ann moved round to position 1 of 4/);
+    expect(live.textContent).toMatch(/nearest the phone/);
+  });
+
+  it('re-announces an identical result, so a repeated reset is never silent', () => {
+    renderPlay(ONE_ROUND);
+    const panel = openRearrange();
+    const live = panel.querySelector('[role="status"]') as HTMLElement;
+    const reset = screen.getByRole('button', { name: /Back to the setup order/ });
+
+    fireEvent.click(reset);
+    const first = live.textContent;
+    fireEvent.click(reset);
+    const second = live.textContent;
+    // Same message, but the DOM text must DIFFER or a screen reader stays quiet.
+    expect(second).toMatch(/Back to the setup order/);
+    expect(second).not.toBe(first);
   });
 
   it('exposes each player position to a screen reader on the row itself', () => {
@@ -299,10 +333,129 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
     expect(shapeOf('d')).toBe(before);
   });
 
+  it('tells the scorekeeper WHICH WAY round the table to go', () => {
+    renderPlay(ONE_ROUND);
+    const panel = openRearrange();
+    // Position 1 anchored AND the direction stated. Getting the direction wrong
+    // mirrors the ring, which is worse than the stale order being fixed.
+    expect(panel.textContent).toMatch(/Position 1 is whoever sits nearest the phone/i);
+    expect(panel.textContent).toMatch(/work round to their left/i);
+  });
+
+  it('uses move glyphs that cannot be confused with a seat shape', () => {
+    renderPlay(ONE_ROUND);
+    openRearrange();
+    // Seat 2 (0-based) is the ▲ shape, and ▲ also means "starts next" on the
+    // ring, so the move controls must not reuse it.
+    const moves = screen
+      .getByTestId('rearrange-seats')
+      .querySelectorAll<HTMLElement>('.rearrange__move');
+    for (const btn of Array.from(moves)) {
+      expect(btn.textContent).not.toContain('\u25b2');
+      expect(btn.textContent).not.toContain('\u25bc');
+    }
+  });
+
+  it('shows that a knocked-out player is OUT, in words not colour', () => {
+    const storage = new FakeStorage();
+    render(
+      <ThemeProvider initialTheme="felt">
+        <StoreProvider storage={storage}>
+          <Harness
+            settings={{ ...fourPlayers(), knockoutScore: 20 }}
+            history={[{ callerId: 'a', hands: { a: 2, b: 25, c: 5, d: 5 } }]}
+          />
+        </StoreProvider>
+      </ThemeProvider>,
+    );
+    const panel = openRearrange();
+    const boRow = panel.querySelector<HTMLElement>('.rearrange__row[data-player="b"]');
+    expect(boRow?.textContent).toMatch(/out/i);
+    // And a player still in the game is not marked.
+    const annRow = panel.querySelector<HTMLElement>('.rearrange__row[data-player="a"]');
+    expect(annRow?.querySelector('.rearrange__out')).toBeNull();
+  });
+
+  it('returns focus to the "Rearrange seats" trigger when the mode is left', () => {
+    renderPlay(ONE_ROUND);
+    const trigger = screen.getByRole('button', { name: /Rearrange seats/ });
+    act(() => trigger.focus());
+    fireEvent.click(trigger);
+    // Focus moved to the mode's heading, not left at the top of the document.
+    expect(document.activeElement).not.toBe(trigger);
+
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }));
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: /Rearrange seats/ }),
+    );
+  });
+
+  it('returns focus to the trigger after SAVING too', () => {
+    renderPlay(ONE_ROUND);
+    fireEvent.click(screen.getByRole('button', { name: /Rearrange seats/ }));
+    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: /Rearrange seats/ }),
+    );
+  });
+
   it('is not offered when the circle view is not the view in use', () => {
     renderPlay(ONE_ROUND);
     fireEvent.click(screen.getByRole('button', { name: /Big board/ }));
     expect(screen.queryByRole('button', { name: /Rearrange seats/ })).toBeNull();
+  });
+});
+
+describe('Rearrange seats — the two-player case', () => {
+  function renderPair() {
+    const storage = new FakeStorage();
+    return render(
+      <ThemeProvider initialTheme="felt">
+        <StoreProvider storage={storage}>
+          <Harness
+            settings={{
+              ...fourPlayers(),
+              players: [
+                { id: 'a', name: 'Ann', seat: 0 },
+                { id: 'b', name: 'Bo', seat: 1 },
+              ],
+            }}
+          />
+        </StoreProvider>
+      </ThemeProvider>,
+    );
+  }
+
+  it('shows ONE "Swap seats" button per row, not two arrows that do the same thing', () => {
+    renderPair();
+    const panel = openRearrange();
+    // With two players, "one place earlier" and "one place later" are the same
+    // move, so two controls would be two ways to do one thing.
+    expect(panel.querySelectorAll('.rearrange__move').length).toBe(2);
+    expect(screen.getAllByRole('button', { name: /^Swap seats/ }).length).toBe(2);
+    expect(screen.queryByTestId('move-later-a')).toBeNull();
+    expect(screen.queryByTestId('move-earlier-a')).toBeNull();
+  });
+
+  it('drops the "round the table" wording, which does not apply to two players', () => {
+    renderPair();
+    const panel = openRearrange();
+    expect(panel.textContent).not.toMatch(/work round to their left/i);
+    expect(panel.textContent).toMatch(/who sits nearest the phone/i);
+  });
+
+  it('swapping changes the ring and announces the swap', () => {
+    renderPair();
+    const panel = openRearrange();
+    const live = panel.querySelector('[role="status"]') as HTMLElement;
+
+    fireEvent.click(screen.getByTestId('swap-a'));
+    expect(live.textContent).toMatch(/Swapped\. Ann is now position 2 of 2/);
+
+    fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
+    expect(ringOrderOnScreen()).toEqual(['b', 'a']);
+    expect(screen.getByTestId('seats').textContent).toBe('a:0|b:1');
   });
 });
 

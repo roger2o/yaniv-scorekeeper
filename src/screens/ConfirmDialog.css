@@ -4,11 +4,18 @@
  * press feedback, focus rings, hover-gating and reduced-motion handling come
  * from floor.css.
  *
- * Contrast (both pairs are existing, already-measured theme tokens):
- *   body/title  --ink on --surface          Felt 7.4:1   Arcade ~12:1
- *   confirm     --danger-ink on --danger    Felt 5.06:1  Arcade 4.69:1
- *   cancel      --ink on --surface-raised   Felt 6.2:1   Arcade ~12:1
+ * Contrast — recomputed, all figures Felt / Arcade:
+ *   body + title  --ink on --surface          8.47 / 15.05
+ *   confirm text  --danger-ink on --danger    5.06 /  4.69
+ *   cancel text   --ink on --surface-raised   6.22 / 15.93
  * All clear the WCAG AA 4.5:1 small-text floor.
+ *
+ * Both buttons' EDGES are handled in app.css, which gives every .btn variant a
+ * border that clears the 3:1 non-text bar. That matters most right here: on this
+ * panel the cancel button's fill is only 1.36:1 (Felt) / 1.06:1 (Arcade) against
+ * the surface behind it, and the destructive button's fill 1.67:1 (Felt), so
+ * without those borders neither button had a discernible boundary and the SAFE
+ * choice read as the weaker one — the exact inverse of the intent.
  */
 
 .confirm-backdrop {
@@ -55,9 +62,26 @@
 }
 
 /* Both actions stay at the 56px primary-control floor (inherited from .btn) and
-   share the width evenly; on a 375px phone they sit side by side, and wrap to
-   full width only if a label is long. */
+   share the width evenly.
+   The min-width is 132px, NOT the 150px this first shipped with: at 375px the
+   panel gives the row 303px of usable width, so 2 x 150 + 10px gap = 310px
+   overflowed by 7px and the buttons wrapped. Wrapping put the IRREVERSIBLE
+   action full-width at the bottom of the row, the easiest thumb target on the
+   phone, which is precisely where it must not be. 2 x 132 + 10 = 274px fits with
+   room to spare, so they genuinely sit side by side from 375px up. */
 .confirm-dialog__actions .btn {
   flex: 1;
-  min-width: 150px;
+  min-width: 132px;
+}
+
+/* If a future translation is long enough to wrap anyway, keep the destructive
+   action OFF the bottom edge. Cancel stays first in the DOM (and so first in tab
+   order) regardless of visual order. */
+@media (max-width: 359px) {
+  .confirm-dialog__actions {
+    flex-direction: column;
+  }
+  .confirm-dialog__confirm {
+    order: -1;
+  }
 }

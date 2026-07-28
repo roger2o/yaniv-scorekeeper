@@ -22,7 +22,7 @@ import { Confetti } from './Confetti';
 import './EndGameScreen.css';
 
 export function EndGameScreen() {
-  const { game, state, resetGame, startGame } = useStore();
+  const { game, state, resetGame, startGame, setRingOrder } = useStore();
   const { theme } = useTheme();
 
   if (game === null) {
@@ -68,15 +68,32 @@ export function EndGameScreen() {
     if (state.settings === null) return;
     // Same names + settings, fresh ids, contiguous seats, no join markers
     // (everyone starts from round 0 again).
-    const settings: GameSettings = {
-      ...state.settings,
-      players: state.settings.players.map((p, i) => ({
-        id: makePlayerId(i),
-        name: p.name,
-        seat: i,
-      })),
-    };
+    const oldPlayers = [...state.settings.players].sort((a, b) => a.seat - b.seat);
+    const players = oldPlayers.map((p, i) => ({
+      id: makePlayerId(i),
+      name: p.name,
+      seat: i,
+    }));
+    const settings: GameSettings = { ...state.settings, players };
+
+    // A rematch is the same people in the same chairs, so carry the circle-view
+    // arrangement across. It cannot be copied by player id (every id is
+    // regenerated above), so it is translated through SEAT INDEX: old id -> old
+    // seat -> new id at that seat. Without this the scorekeeper would redo the
+    // seating every single game, which is exactly when they are least likely to
+    // bother, leaving the ring wrong.
+    const seatOfOldId = new Map(state.settings.players.map((p) => [p.id, p.seat]));
+    const newIdBySeat = new Map(players.map((p) => [p.seat, p.id]));
+    const carried = (state.ringOrder ?? [])
+      .map((oldId) => {
+        const seat = seatOfOldId.get(oldId);
+        return seat === undefined ? undefined : newIdBySeat.get(seat);
+      })
+      .filter((id): id is string => id !== undefined);
+
+    // START_GAME clears any arrangement, so re-apply after it.
     startGame(settings);
+    if (carried.length > 0) setRingOrder(carried);
   };
 
   return (

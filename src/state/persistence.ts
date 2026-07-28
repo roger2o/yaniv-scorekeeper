@@ -148,19 +148,50 @@ function isValidSettings(value: unknown): value is GameSettings {
 /**
  * Sanitise the optional, DISPLAY-ONLY circle-view arrangement.
  *
- * Returns a list of ids only when the stored value is a non-empty array of
- * strings; anything else (absent, null, a number, an object, an array with a
- * non-string in it, an empty array) yields `undefined`, which the app reads as
- * "use the engine's seat order". A bad arrangement is NEVER treated as a corrupt
- * save — the game itself still loads. Deeper checks (unknown ids, duplicates,
- * wrong length) are handled at render time, where the current player set is
- * known (see screens/ringOrder.ts).
+ * A bad arrangement is NEVER treated as a corrupt save — the game itself always
+ * still loads. But it is also never waved through: this file's whole posture is
+ * that persisted JSON is untrusted, and this was the one field exempted from
+ * that in both directions. Because the store re-persists on every state change,
+ * anything let through here is written back to the device on every subsequent
+ * move, forever. A hand-edited or corrupted arrangement of, say, 20,000 ids
+ * bloats a ~1kB save to well over 100kB and keeps rewriting it, which eventually
+ * trips the storage quota and leaves the player with a "cannot save" warning for
+ * the rest of a live game. Render-time reconciliation hides that symptom without
+ * ever repairing the stored value, so the repair belongs here.
+ *
+ * Returns ids only when the value is a non-empty array of strings, then:
+ *  - DROPS any id that is not a player in this game (`players` gives us the only
+ *    authority on that, and it has already passed structural validation);
+ *  - DROPS duplicates, keeping the first occurrence;
+ *  - CAPS the length at the player count, which after the two steps above is
+ *    already guaranteed but is asserted anyway so the field can never grow
+ *    unbounded whatever a future caller does.
+ * Anything left empty yields `undefined`, which the app reads as "use the
+ * engine's seat order".
+ *
+ * A SHORTER-than-full result is legitimate and is left alone: that is exactly
+ * what a mid-game join looks like, and render-time reconciliation completes it
+ * (see screens/ringOrder.ts).
  */
-function sanitizeRingOrder(value: unknown): string[] | undefined {
+function sanitizeRingOrder(
+  value: unknown,
+  players: GameSettings['players'] | null,
+): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   if (value.length === 0) return undefined;
   if (!value.every((id) => typeof id === 'string')) return undefined;
-  return value as string[];
+  if (players === null || players.length === 0) return undefined;
+
+  const known = new Set(players.map((p) => p.id));
+  const seen = new Set<string>();
+  const cleaned: string[] = [];
+  for (const id of value as string[]) {
+    if (!known.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    cleaned.push(id);
+    if (cleaned.length === players.length) break;
+  }
+  return cleaned.length === 0 ? undefined : cleaned;
 }
 
 /**
@@ -222,6 +253,7 @@ export function loadGame(storage: Storage | null = defaultStorage()): LoadResult
   };
   const ringOrder = sanitizeRingOrder(
     (envelope.state as { ringOrder?: unknown }).ringOrder,
+    state.settings?.players ?? null,
   );
   // Only attach the key when there is a real arrangement, so a save written by
   // an older build round-trips in its original three-field shape.

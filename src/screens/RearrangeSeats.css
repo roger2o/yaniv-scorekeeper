@@ -1,20 +1,51 @@
 /*
  * Rearrange-seats mode. Mobile-first at 375px: one row per player, a position
- * badge on the left, the name in the middle, and two 56px move buttons on the
- * right. Fully token-driven so both themes skin it; press feedback, focus rings,
+ * badge on the left, the name in the middle, and 56px move buttons on the right.
+ * Fully token-driven so both themes skin it; press feedback, focus rings,
  * hover-gating and reduced-motion all inherit from floor.css.
  *
- * Contrast (existing, already-measured theme tokens):
- *   title / name      --ink on --surface-raised   Felt 6.2:1   Arcade ~12:1
- *   lead / note       --ink-muted on --surface     Felt 7.4:1   Arcade 5.7:1
- *   position badge    --accent-ink on --accent     Felt ~6:1    Arcade ~5.3:1
- *   move buttons      --ink on --surface           Felt 8.5:1   Arcade ~14:1
+ * LAYOUT — the "Save order" problem this was rebuilt to solve. At 375px the list
+ * alone runs to roughly 739px at 4 players and 901px at 6, against about 560px of
+ * usable height on the smallest supported phone. The actions used `margin-top:
+ * auto`, which does nothing once content overflows, so the buttons sat directly
+ * after the last row, off-screen: the scorekeeper could reorder everyone and find
+ * nothing to press. Two changes fix it:
+ *   1. The intro prose is one short line, not two paragraphs (164px of reading
+ *      before the list is too much at a noisy table). The reassurance about scope
+ *      moved BELOW the list, where it is read after the work rather than before.
+ *   2. The LIST is the scroll area, and the action row sits below it, so
+ *      Save/Cancel are always on screen whatever the player count. This is the
+ *      deterministic mechanism: `.app-frame` is height-bounded (#root is
+ *      height:100% and the frame is a flex item with min-height:0), so a
+ *      `flex:1; overflow-y:auto; min-height:0` child scrolls internally and the
+ *      title, intro, note and actions are all permanently visible.
+ *   3. The action row is ALSO `position: sticky; bottom: 0` with an opaque
+ *      background. That is inert while (2) holds — nothing overflows the frame,
+ *      so there is nothing to stick to — and exists only as a fallback for the
+ *      case where the page as a whole ends up scrolling instead. Nothing in the
+ *      ancestor chain clips (html, body and #root are height:100% with visible
+ *      overflow), so the document is the scrollport in that case.
+ * NOTE: jsdom has no layout engine, so no test in this repo can verify any of
+ * this. It wants a real-device check at 375px with 4, 5 and 6 players.
+ *
+ * Contrast — recomputed, all figures Felt / Arcade:
+ *   title           --ink on --surface           8.47 / 15.05
+ *   lead + note     --ink-muted on --surface     6.75 /  5.72
+ *   player name     --ink on --surface-raised    6.22 / 15.93
+ *   position badge  --accent-ink on --accent     6.81 /  4.86
+ *   move button     --ink on --surface           8.47 / 15.05
+ *   "out" marker    --ink on --surface-raised    6.22 / 15.93
  * All clear the WCAG AA 4.5:1 small-text floor.
  *
- * The move buttons are outlined in --accent rather than --border so their edge
- * clears the 3:1 non-text bar against the row they sit on (--accent vs
- * --surface-raised: Felt 3.03:1, Arcade 4.79:1) — the neutral borders are only
- * ~1.5:1 on the felt and would leave the control boundary indistinct.
+ * The "out" marker deliberately uses NO colour, not even for its glyph:
+ * `--danger` measures only 1.23:1 against the raised row on Felt, so a red ✕
+ * there would be close to invisible rather than merely redundant. The word "out"
+ * and the ✕ carry the meaning outright.
+ *
+ * The move buttons are outlined in --accent rather than a neutral border so their
+ * edge clears the 3:1 non-text bar against the row they sit on (--accent vs
+ * --surface-raised: 3.03 / 4.86). The neutral tokens are nowhere near: --border
+ * measures just 1.06:1 on the felt row and --border-strong 1.50:1.
  */
 
 .rearrange__title {
@@ -23,21 +54,37 @@
   margin-bottom: 8px;
 }
 
-.rearrange__lead,
-.rearrange__note {
+.rearrange__lead {
   margin: 0 0 10px;
   font-size: 0.95rem;
   line-height: 1.45;
   color: var(--ink-muted);
 }
 
+.rearrange__note {
+  margin: 4px 0 12px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
 .rearrange__list {
   list-style: none;
-  margin: 8px 0 16px;
-  padding: 0;
+  margin: 8px 0 12px;
+  /* Right-hand padding leaves room for the scrollbar without clipping the move
+     buttons; the 2px top/bottom stops focus rings being cropped at the edges. */
+  padding: 2px 2px 2px 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  /* The scroll area (see the LAYOUT note above): the list gives up height so the
+     actions below it are never pushed off-screen. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Don't chain a finished list-scroll into scrolling the page behind it. */
+  overscroll-behavior: contain;
 }
 
 .rearrange__row {
@@ -80,6 +127,19 @@
   overflow-wrap: anywhere;
 }
 
+/* Knocked-out players are still seated, so they are still listed — but the
+   scorekeeper must be told, or they are being asked to place someone without
+   knowing they are out. Real text + a glyph, no colour dependency at all. */
+.rearrange__out {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
 .rearrange__moves {
   flex: 0 0 auto;
   display: flex;
@@ -92,6 +152,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   width: 56px;
   height: 56px;
   border-radius: var(--radius);
@@ -102,11 +163,30 @@
   font-weight: 800;
 }
 
+/* The two-player case shows ONE labelled button instead of two arrows, so it
+   needs room for its text. */
+.rearrange__move--swap {
+  width: auto;
+  padding: 0 14px;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+}
+
+/* Sticky footer: always reachable, whatever the player count.
+   The negative horizontal margins (cancelled by matching padding) let the opaque
+   bar span the full frame width. Without them the .app-frame's 16px gutters would
+   stay transparent and player rows would be seen scrolling through them. */
 .rearrange__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: auto;
+  margin: 4px -16px 0;
+  padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 2px solid var(--border-strong);
 }
 
 .rearrange__actions .btn {

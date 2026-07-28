@@ -159,6 +159,22 @@
   font-size: 0.95rem;
 }
 
+/* "End game" gets its own row, separated by a rule and pushed to the trailing
+   edge. It is the only irreversible action on this screen and must not sit a
+   thumb-width from the routine controls above it. */
+.play__end-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.play__end-btn {
+  min-height: 50px;
+  font-size: 0.95rem;
+}
+
 /* --- Join card ----------------------------------------------------------- */
 .play__join-card {
   margin-top: 12px;

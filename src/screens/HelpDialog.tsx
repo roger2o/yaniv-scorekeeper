@@ -31,6 +31,7 @@
 import { useRef, useState } from 'react';
 import { HowToUse } from '../content/helpContent';
 import { HowToPlay } from '../content/helpContent';
+import { ModalLayer } from './modal';
 import { useModalDialog } from './useModalDialog';
 import '../content/helpProse.css';
 import './modal.css';
@@ -46,9 +47,30 @@ const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
 export interface HelpDialogProps {
   /** Called when the dialog requests to close (Escape, backdrop, close button). */
   onClose: () => void;
+  /**
+   * The "?" control that opened this dialog, so focus can be returned to it.
+   * Optional only for the standalone-mount case in tests; the app always passes
+   * it, because inferring it from `document.activeElement` is unreliable on iOS
+   * Safari (it does not focus a button on tap).
+   */
+  returnFocusTo?: HTMLElement | null;
 }
 
-export function HelpDialog({ onClose }: HelpDialogProps) {
+/**
+ * Split in two on purpose — see the matching note in ConfirmDialog. `ModalLayer`
+ * mounts its children only once its portal container is attached, and React runs
+ * child effects before parent effects, so the dialog mechanics must live in a
+ * CHILD of the layer or the focus effect would run against unmounted refs.
+ */
+export function HelpDialog(props: HelpDialogProps) {
+  return (
+    <ModalLayer>
+      <HelpDialogBody {...props} />
+    </ModalLayer>
+  );
+}
+
+function HelpDialogBody({ onClose, returnFocusTo }: HelpDialogProps) {
   const [active, setActive] = useState<TabId>('use');
   const [shareNote, setShareNote] = useState<string | null>(null);
   // When BOTH Web Share and clipboard fail, we surface the URL as a real,
@@ -65,6 +87,7 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
   const { titleId, backdropProps, dialogProps } = useModalDialog({
     onClose,
     initialFocus: () => tabRefs.current[0],
+    returnFocusTo,
   });
 
   // The app's own URL — what we share so the recipient can install it.

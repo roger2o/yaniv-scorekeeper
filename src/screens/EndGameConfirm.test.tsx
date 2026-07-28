@@ -101,8 +101,10 @@ describe('End game — the confirmation blocks an accidental end', () => {
     fireEvent.click(endGameTrigger());
     const dialog = screen.getByTestId('confirm-end-game');
     expect(dialog.textContent).toMatch(/End the game\?/);
-    expect(dialog.textContent).toMatch(/final result/i);
-    expect(dialog.textContent).toMatch(/cannot be undone/i);
+    // Names what actually happens (final scores shown) and what is actually lost
+    // (no more rounds), rather than a vague "cannot be undone".
+    expect(dialog.textContent).toMatch(/final scores/i);
+    expect(dialog.textContent).toMatch(/add more rounds/i);
     // The confirm action is labelled with the action, never a bare "OK".
     expect(screen.getByTestId('confirm-end-game-confirm').textContent).toMatch(
       /End game/,
@@ -127,7 +129,7 @@ describe('End game — every "no" answer leaves the game running', () => {
   it('Escape leaves the game running', () => {
     renderPlay();
     fireEvent.click(endGameTrigger());
-    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('alertdialog'), { key: 'Escape' });
 
     expect(screen.queryByTestId('confirm-end-game')).toBeNull();
     expect(screen.getByTestId('screen').textContent).toBe('play');
@@ -182,17 +184,17 @@ describe('End game — confirming ends it exactly as before', () => {
 });
 
 describe('End game — accessibility contract (shared dialog mechanics)', () => {
-  it('is a labelled, described modal dialog', () => {
+  it('is a labelled, described ALERT dialog (the canonical destructive role)', () => {
     renderPlay();
     fireEvent.click(endGameTrigger());
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('alertdialog');
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     const titleId = dialog.getAttribute('aria-labelledby');
     const bodyId = dialog.getAttribute('aria-describedby');
     expect(titleId).toBeTruthy();
     expect(bodyId).toBeTruthy();
     expect(document.getElementById(titleId!)?.textContent).toMatch(/End the game\?/);
-    expect(document.getElementById(bodyId!)?.textContent).toMatch(/final result/i);
+    expect(document.getElementById(bodyId!)?.textContent).toMatch(/final scores/i);
   });
 
   it('announces itself as opening a dialog from the trigger', () => {
@@ -200,12 +202,56 @@ describe('End game — accessibility contract (shared dialog mechanics)', () => 
     expect(endGameTrigger().getAttribute('aria-haspopup')).toBe('dialog');
   });
 
+  it('Escape closes it even when focus has fallen to <body>', () => {
+    renderPlay();
+    fireEvent.click(endGameTrigger());
+    // Tapping the heading or the body copy moves focus off the cancel button:
+    // neither is focusable, so the browser parks focus on <body>. A handler bound
+    // to the dialog element would never fire from there, which read to the user
+    // as "Escape does not work".
+    act(() => (document.activeElement as HTMLElement | null)?.blur?.());
+    expect(document.activeElement).toBe(document.body);
+
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(screen.queryByTestId('confirm-end-game')).toBeNull();
+    expect(screen.getByTestId('screen').textContent).toBe('play');
+    expect(screen.getByTestId('history-len').textContent).toBe('1');
+  });
+
+  it('makes the game behind it inert and unreadable to assistive tech', () => {
+    renderPlay();
+    fireEvent.click(endGameTrigger());
+
+    // aria-modal alone is a request; the background is also genuinely frozen, so
+    // a screen-reader or switch-access user cannot reach the game controls, and
+    // the page behind cannot scroll under the dialog.
+    const dialog = screen.getByTestId('confirm-end-game');
+    const layer = dialog.closest('.modal-layer');
+    expect(layer).toBeTruthy();
+    const others = Array.from(document.body.children).filter((el) => el !== layer);
+    expect(others.length).toBeGreaterThan(0);
+    for (const el of others) {
+      expect(el.getAttribute('aria-hidden')).toBe('true');
+      expect(el.hasAttribute('inert')).toBe(true);
+    }
+    expect(document.body.style.overflow).toBe('hidden');
+
+    // ...and all of it is restored exactly on close.
+    fireEvent.click(screen.getByTestId('confirm-end-game-cancel'));
+    for (const el of others) {
+      expect(el.hasAttribute('aria-hidden')).toBe(false);
+      expect(el.hasAttribute('inert')).toBe(false);
+    }
+    expect(document.body.style.overflow).toBe('');
+    expect(document.querySelector('.modal-layer')).toBeNull();
+  });
+
   it('traps Tab inside the dialog (cannot tab out to the game behind it)', () => {
     renderPlay();
     fireEvent.click(endGameTrigger());
     const cancel = screen.getByTestId('confirm-end-game-cancel');
     const confirm = screen.getByTestId('confirm-end-game-confirm');
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('alertdialog');
 
     // Forward from the LAST control wraps to the first.
     act(() => confirm.focus());

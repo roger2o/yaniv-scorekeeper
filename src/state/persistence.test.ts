@@ -255,6 +255,94 @@ describe('persistence — circle-view arrangement is backward compatible', () =>
     });
   }
 
+  /**
+   * The arrangement was the ONE persisted field that was never cleaned. Because
+   * the store re-persists on every state change, anything let through was written
+   * back to the device forever: a hostile or corrupted arrangement of tens of
+   * thousands of ids turns a ~1kB save into a >100kB one and keeps rewriting it,
+   * which eventually trips the storage quota and leaves the player looking at a
+   * "cannot save" warning for the rest of a live game.
+   */
+  describe('the arrangement is PRUNED and CAPPED on load, not just tolerated', () => {
+    function loadWith(ringOrder: unknown) {
+      const storage = new FakeStorage();
+      storage.seed(
+        STORAGE_KEY,
+        JSON.stringify({
+          version: SCHEMA_VERSION,
+          state: { settings: makeSettings(), history: [], screen: 'play', ringOrder },
+        }),
+      );
+      const result = loadGame(storage);
+      expect(result.status).toBe('ok');
+      return result.status === 'ok' ? result.state.ringOrder : undefined;
+    }
+
+    it('drops ids that are not players in this game', () => {
+      expect(loadWith(['ghost', 'c', 'also-gone', 'a'])).toEqual(['c', 'a']);
+    });
+
+    it('drops duplicates, keeping the first occurrence', () => {
+      expect(loadWith(['c', 'c', 'a', 'c'])).toEqual(['c', 'a']);
+    });
+
+    it('caps the length at the player count', () => {
+      const huge = Array.from({ length: 20_000 }, (_, i) => `junk-${i}`);
+      huge.splice(10_000, 0, 'c', 'a', 'b');
+      const cleaned = loadWith(huge);
+      expect(cleaned).toEqual(['c', 'a', 'b']);
+      expect(cleaned!.length).toBeLessThanOrEqual(makeSettings().players.length);
+    });
+
+    it('a hostile arrangement cannot bloat what gets written back', () => {
+      const storage = new FakeStorage();
+      const huge = Array.from({ length: 20_000 }, (_, i) => `junk-${i}`);
+      storage.seed(
+        STORAGE_KEY,
+        JSON.stringify({
+          version: SCHEMA_VERSION,
+          state: { settings: makeSettings(), history: [], screen: 'play', ringOrder: huge },
+        }),
+      );
+      const before = (storage.raw(STORAGE_KEY) as string).length;
+      expect(before).toBeGreaterThan(100_000);
+
+      const result = loadGame(storage);
+      expect(result.status).toBe('ok');
+      if (result.status !== 'ok') return;
+      // Re-saving what we loaded (which is what the store does on every change)
+      // must write a SMALL save, not the bloated one back again.
+      saveGame(result.state, storage);
+      const after = (storage.raw(STORAGE_KEY) as string).length;
+      expect(after).toBeLessThan(2_000);
+    });
+
+    it('leaves a legitimately SHORT arrangement alone (the mid-game-join shape)', () => {
+      // Two of three ids: a third player joined after this was saved. Completing
+      // it is render-time reconciliation\'s job, not persistence\'s.
+      expect(loadWith(['c', 'a'])).toEqual(['c', 'a']);
+    });
+
+    it('yields no arrangement at all when nothing usable survives', () => {
+      expect(loadWith(['ghost', 'gone'])).toBeUndefined();
+      expect(loadWith([])).toBeUndefined();
+    });
+
+    it('yields no arrangement when there is no game to match ids against', () => {
+      const storage = new FakeStorage();
+      storage.seed(
+        STORAGE_KEY,
+        JSON.stringify({
+          version: SCHEMA_VERSION,
+          state: { settings: null, history: [], screen: 'setup', ringOrder: ['a', 'b'] },
+        }),
+      );
+      const result = loadGame(storage);
+      expect(result.status).toBe('ok');
+      if (result.status === 'ok') expect(result.state.ringOrder).toBeUndefined();
+    });
+  });
+
   it('drops unknown extra keys rather than handing them to the app', () => {
     const storage = new FakeStorage();
     storage.seed(

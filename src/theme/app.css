@@ -46,7 +46,29 @@
   gap: 8px;
 }
 
-/* --- Primary / secondary buttons ----------------------------------------- */
+/* --- Primary / secondary buttons -----------------------------------------
+ *
+ * EVERY variant carries a border that clears the WCAG 1.4.11 non-text bar
+ * (3:1) against the surfaces it is used on, because the FILL alone does not
+ * delineate these buttons: `--surface-raised` sits at only 1.36:1 (Felt) and
+ * 1.06:1 (Arcade) against the page surface, and `--danger` at 1.67:1 (Felt).
+ * The neutral border tokens are far too quiet for the job — `--border` measures
+ * 1.45:1 (Felt) / 1.25:1 (Arcade) on the page surface and 1.06:1 / 1.32:1 on a
+ * raised card, and `--border-strong` only reaches 2.04:1 / 1.54:1 — so each
+ * variant borrows a token that genuinely reads as an edge.
+ *
+ * Measured boundary contrast (border colour vs the surface behind the button):
+ *                     vs --surface        vs --surface-raised     vs own fill
+ *   --secondary  --accent      4.12 / 4.59      3.03 / 4.86            n/a
+ *   --ghost      --ink-muted   6.75 / 5.72      4.95 / 6.06            n/a
+ *   --danger     --ink         8.47 / 15.05     6.22 / 15.93     5.06 / 3.40
+ *   --primary    (filled --accent, 4.12 / 4.59 against the page surface)
+ * (Felt / Arcade. All clear 3:1.)
+ *
+ * Text contrast is unchanged: --ink on --surface-raised 6.22 / 15.93,
+ * --accent-ink on --accent 6.81 / 4.86, --danger-ink on --danger 5.06 / 4.69,
+ * --ink on transparent-over-surface 8.47 / 15.05. All clear the 4.5:1 AA floor.
+ */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -67,21 +89,26 @@
   box-shadow: var(--shadow);
 }
 
+/* Outlined counterpart to --primary: same accent language, unfilled. */
 .btn--secondary {
   background: var(--surface-raised);
   color: var(--ink);
-  border-color: var(--border);
+  border-color: var(--accent);
 }
 
+/* Destructive. A neutral high-contrast edge rather than the accent, so it is
+   never mistaken for the primary action it sits beside. */
 .btn--danger {
   background: var(--danger);
   color: var(--danger-ink);
+  border-color: var(--ink);
 }
 
+/* Quietest of the three, but still a legible edge. */
 .btn--ghost {
   background: transparent;
   color: var(--ink);
-  border-color: var(--border-strong);
+  border-color: var(--ink-muted);
 }
 
 .btn--block {

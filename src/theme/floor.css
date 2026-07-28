@@ -90,11 +90,16 @@ button:disabled {
   opacity: 0.5;
 }
 
-/* --- Focus: visible ring on EVERY focusable element ---------------------- */
+/* --- Focus: visible ring on EVERY focusable element ----------------------
+ * Deliberately sets ONLY outline properties. It used to also set
+ * `border-radius: 4px`, which is not a focus property at all: it changed the
+ * element's own corners on focus, and at equal specificity to component rules
+ * like `.rearrange__move`, so a keyboard-focused control could visibly snap
+ * from 12/16px corners down to 4px. Browsers already round the outline to
+ * follow the element's own radius, so nothing is lost by dropping it. */
 :focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 /* --- Hover gated to true hover devices (kills sticky-hover on touch) ------ */

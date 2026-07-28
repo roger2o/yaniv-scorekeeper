@@ -23,7 +23,7 @@
  * circle view — see RearrangeSeats / ringOrder.ts.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../state';
 import type { GameState, StandingRow } from '../engine';
 import { ThemeToggle } from '../theme';
@@ -48,6 +48,22 @@ export function PlayScreen() {
   const [newName, setNewName] = useState('');
   const [rearranging, setRearranging] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
+
+  // Both the confirmation dialog and the rearrange mode take the screen away
+  // from the control that opened them, so focus must be handed back on the way
+  // out or a keyboard / switch-access user is dumped at the top of the document
+  // and has to traverse the whole top bar again (WCAG 2.4.3).
+  const endGameRef = useRef<HTMLButtonElement | null>(null);
+  const rearrangeRef = useRef<HTMLButtonElement | null>(null);
+  // Set while leaving the rearrange mode, so the effect below knows to restore
+  // focus once the trigger is back in the document.
+  const returnFocusToRearrange = useRef(false);
+  useEffect(() => {
+    if (!rearranging && returnFocusToRearrange.current) {
+      returnFocusToRearrange.current = false;
+      rearrangeRef.current?.focus();
+    }
+  }, [rearranging]);
 
   // --- Engine-error guard (edit/undo invalidated a mid-game join, etc.) ----
   // When the current source-of-truth makes the engine throw, `game` is null. We
@@ -102,7 +118,15 @@ export function PlayScreen() {
   const useBoard = showBoard || slots === null || playerCount > MAX_RING_PLAYERS;
 
   if (rearranging) {
-    return <RearrangeSeats game={game} onDone={() => setRearranging(false)} />;
+    return (
+      <RearrangeSeats
+        game={game}
+        onDone={() => {
+          returnFocusToRearrange.current = true;
+          setRearranging(false);
+        }}
+      />
+    );
   }
 
   // The ring is drawn in the scorekeeper's DISPLAY arrangement, reconciled
@@ -212,19 +236,31 @@ export function PlayScreen() {
             ↩ Undo round
           </button>
           {/* Rearranging is a CIRCLE-VIEW-ONLY preference, so it is only offered
-              while the circle view is the one in use. */}
+              while the circle view is the one in use. Deliberately the QUIETEST
+              variant in this row: Undo is used every single round, this is a rare
+              display tidy-up, and the visual weight should say so. */}
           {!useBoard && (
             <button
+              ref={rearrangeRef}
               type="button"
-              className="btn btn--secondary"
+              className="btn btn--ghost"
               onClick={() => setRearranging(true)}
             >
               ⇄ Rearrange seats
             </button>
           )}
+        </div>
+      )}
+
+      {/* "End game" is the one IRREVERSIBLE action on this screen, so it does not
+          share a row with the routine controls. Sitting a thumb-width from a
+          harmless display preference is how mis-taps happen. */}
+      {!addingPlayer && (
+        <div className="play__end-row">
           <button
+            ref={endGameRef}
             type="button"
-            className="btn btn--ghost"
+            className="btn btn--ghost play__end-btn"
             aria-haspopup="dialog"
             onClick={() => setConfirmingEnd(true)}
           >
@@ -242,15 +278,15 @@ export function PlayScreen() {
           title="End the game?"
           confirmLabel="End game"
           cancelLabel="Keep playing"
-          tone="danger"
+          returnFocusTo={endGameRef.current}
           onCancel={() => setConfirmingEnd(false)}
           onConfirm={() => {
             setConfirmingEnd(false);
             endGame();
           }}
         >
-          The game will be ended now and the final result shown. This cannot be
-          undone.
+          This ends the game and shows the final scores. You won’t be able to add
+          more rounds.
         </ConfirmDialog>
       )}
     </div>

@@ -9,6 +9,11 @@
  *
  * The scrim colour is the per-theme `--scrim` token (no hardcoded black).
  */
+/* `.modal-layer` (the portal container created in modal.tsx) deliberately has no
+   rule: it is a plain wrapper whose only child is a fixed-position backdrop, so it
+   needs no layout of its own. The class name exists as a JS/test handle — do not
+   delete it as unused CSS. */
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

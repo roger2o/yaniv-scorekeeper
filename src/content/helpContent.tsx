@@ -94,10 +94,11 @@ export function HowToUse() {
         <h3 id="howto-a4">Read the standings + who starts next</h3>
         <p>
           After you confirm, the app shows the <strong>circle view</strong> —
-          everyone sits around a ring in the <strong>same order they sit at the
-          table</strong>, and each player’s score is turned to face their own
-          seat, so anyone can read their own score across the table. Lay the
-          phone flat in the middle.
+          everyone sits around a ring in the order you added them at setup, and
+          each player’s score is turned to face their own seat, so anyone can read
+          their own score across the table. Lay the phone flat in the middle. If
+          people move around, you can{' '}
+          <strong>rearrange the circle to match</strong>. See below.
         </p>
         <ul>
           <li>
@@ -114,6 +115,22 @@ export function HowToUse() {
             upright list view.
           </li>
         </ul>
+      </section>
+
+      <section aria-labelledby="howto-a4b">
+        <h3 id="howto-a4b">Someone swapped seats?</h3>
+        <p>
+          Tap <strong>Rearrange seats</strong> and put the list in the order
+          everyone is sitting now. Position 1 is whoever sits nearest the phone,
+          then you work round to their left. Use the arrows to move a player up or
+          down, then tap <strong>Save order</strong>.
+        </p>
+        <p>
+          This only changes the circle view, so it is always safe to use mid-game.
+          Scores, the scoresheet and who starts the next round are not affected,
+          and the scoresheet keeps its columns in the original setup order so the
+          running record stays easy to follow.
+        </p>
       </section>
 
       <section aria-labelledby="howto-a5">
