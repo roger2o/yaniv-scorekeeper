@@ -14,12 +14,13 @@
  * settings (fresh ids; mid-game joiners become normal round-0 players).
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../state';
 import type { GameSettings } from '../engine';
 import { useTheme } from '../theme';
 import { makePlayerId, seatColorVar, seatShape } from './seat';
 import { Confetti } from './Confetti';
+import { ConfirmDialog } from './ConfirmDialog';
 import './EndGameScreen.css';
 
 export function EndGameScreen() {
@@ -33,7 +34,26 @@ export function EndGameScreen() {
     crownRef.current?.focus();
   }, []);
 
+  const [confirmingNewGame, setConfirmingNewGame] = useState(false);
+  const newGameRef = useRef<HTMLButtonElement | null>(null);
+
+  /**
+   * "New game" wipes the game and its saved copy. It asks first ONLY when the tap
+   * would throw away something the scorekeeper would actually miss, which is a
+   * RECORDED ROUND — the scoresheet and the final scores derived from it. With no
+   * rounds recorded there is nothing scored to lose: the only casualty is the typed
+   * player names, which Rematch preserves anyway and which take seconds to retype.
+   * Nagging there would be friction with nothing behind it.
+   *
+   * Deliberately keyed on `state.history`, the source of truth, rather than on the
+   * derived rounds: history is what `resetGame` destroys.
+   */
+  const wouldLoseAScoresheet = state.history.length > 0;
+
   if (game === null) {
+    // Engine-rejected state: the game here is already unusable, and this button is
+    // the ONLY way out of it. No confirmation — gating the single escape hatch from
+    // a broken state behind a question would be actively unhelpful.
     return (
       <div className="app-frame end">
         <h1>Game over</h1>
@@ -176,13 +196,43 @@ export function EndGameScreen() {
       )}
 
       <div className="end__actions">
-        <button type="button" className="btn btn--secondary" onClick={resetGame}>
+        <button
+          ref={newGameRef}
+          type="button"
+          className="btn btn--secondary"
+          // Only advertises a dialog when it will actually open one.
+          aria-haspopup={wouldLoseAScoresheet ? 'dialog' : undefined}
+          onClick={() => {
+            if (wouldLoseAScoresheet) setConfirmingNewGame(true);
+            else resetGame();
+          }}
+        >
           New game
         </button>
+        {/* Rematch is the NON-destructive path: same people, fresh scoresheet, and
+            it carries the seating across. It deliberately has no confirmation. */}
         <button type="button" className="btn btn--primary" onClick={rematch}>
           Rematch ▸
         </button>
       </div>
+
+      {confirmingNewGame && (
+        <ConfirmDialog
+          testId="confirm-new-game"
+          title="Start a new game?"
+          confirmLabel="New game"
+          cancelLabel="Keep this game"
+          returnFocusTo={newGameRef.current}
+          onCancel={() => setConfirmingNewGame(false)}
+          onConfirm={() => {
+            setConfirmingNewGame(false);
+            resetGame();
+          }}
+        >
+          This clears the scoresheet and the final scores. To play again with the
+          same people, use Rematch instead.
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

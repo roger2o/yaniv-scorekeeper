@@ -188,10 +188,12 @@ describe('App — reset clears the game but not the theme', () => {
     playOneRound();
     expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
 
-    // End the game (now via the confirmation step), then New game (reset).
+    // End the game, then New game. BOTH now go through a confirmation: a round has
+    // been recorded, so "New game" would be discarding a real scoresheet.
     fireEvent.click(screen.getByRole('button', { name: /End game/ }));
     fireEvent.click(screen.getByTestId('confirm-end-game-confirm'));
     fireEvent.click(screen.getByRole('button', { name: /New game/ }));
+    fireEvent.click(screen.getByTestId('confirm-new-game-confirm'));
 
     // Back on Setup; no live game persists (reset cleared it; the persist
     // effect then writes back only a clean empty-setup slice).

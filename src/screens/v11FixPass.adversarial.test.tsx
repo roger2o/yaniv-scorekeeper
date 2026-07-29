@@ -1348,10 +1348,12 @@ describe('RESTORED GUARD — a new game never inherits the previous game’s arr
     expect(ringIds()).toEqual(['b', 'a', 'c', 'd']);
     expect(JSON.parse(storedRaw()!).state.ringOrder).toEqual(['b', 'a', 'c', 'd']);
 
-    // End the game, then New game.
+    // End the game, then New game. A round has been recorded, so "New game" now
+    // asks first — it would be discarding a real scoresheet.
     fireEvent.click(endGameTrigger());
     fireEvent.click(screen.getByTestId('confirm-end-game-confirm'));
     fireEvent.click(screen.getByRole('button', { name: /New game/ }));
+    fireEvent.click(screen.getByTestId('confirm-new-game-confirm'));
 
     // Start a completely fresh game through the real Setup screen.
     const names = screen.getAllByLabelText(/Player \d name/i);
