@@ -167,36 +167,42 @@ Depends on Phase 10 + Phase 12.
 ---
 
 ## Phase 14 — v1.1 Features
-The first release after v1.0. Two additions Roger approved on 2026-07-29: a confirmation step before a game can be ended, and the ability to rearrange the circular table view so the ring matches where people are actually sitting. Depends on the shipped v1.0 app.
+The first release after v1.0. Two additions Roger approved on 2026-07-29: a confirmation step before a game can be ended, and the ability to rearrange the circular table view so the ring matches where people are actually sitting. Two smaller additions were approved during the build: a conditional confirmation before "New game", and moving the Play screen's action buttons onto two rows instead of three. Depends on the shipped v1.0 app.
 
 **Scope guard for the whole phase:** the seat rearrangement is **display-only and circle-view-only**. The scoring engine's seat order, the round-history model, the recompute-from-history guarantee, and the vertical scoresheet's column order are all deliberately left alone (reasoning in PROJECT.md Resolved Decisions, 2026-07-29).
 
 ### Build (Turing)
-- [ ] Confirmation step before "End game" ends a game: a clear "Are you sure?" with an obvious way to cancel and carry on playing
-- [ ] Confirmation copy says plainly that ending a game cannot be undone
-- [ ] Confirmation meets the project's accessibility floor (56px targets, focus handling, Escape to cancel, screen-reader labelling), reusing the existing Help-dialog pattern rather than a new one
-- [ ] No route ends a game without passing through the confirmation
-- [ ] Circle-view control to rearrange the ring so the on-screen order matches the physical table
-- [ ] The rearranged order is saved with the game (a per-game display preference), so a refresh does not lose it
-- [ ] Engine seat order untouched: who starts the next round, and the multiple-catcher tie-break, keep ranking by the original seat order
-- [ ] Vertical scoresheet (Big Board) keeps its columns in the original seat order for the whole game
-- [ ] Rearranging the ring can never alter a past round; the round history stays the single source of truth
+- [x] Confirmation step before "End game" ends a game: a clear "Are you sure?" with an obvious way to cancel and carry on playing — *"End the game?" with "Keep playing" and "End game"; the safe choice is the one ready when the prompt opens*
+- [x] Confirmation copy says plainly that ending a game cannot be undone — *"This ends the game and shows the final scores. You won't be able to add more rounds."*
+- [x] Confirmation meets the project's accessibility floor (56px targets, focus handling, Escape to cancel, screen-reader labelling), reusing the existing Help-dialog pattern rather than a new one
+- [x] No route ends a game without passing through the confirmation
+- [x] Circle-view control to rearrange the ring so the on-screen order matches the physical table — *a "Rearrange seats" mode with move buttons rather than drag-and-drop, so it works by keyboard and screen reader; nothing applies until "Save order"*
+- [x] The rearranged order is saved with the game (a per-game display preference), so a refresh does not lose it — *stored as an optional extra field, with the saved-game format deliberately NOT version-bumped so v1.0 and v1.1 can each open the other's saves (see PROJECT.md Resolved Decisions, 2026-07-29)*
+- [x] Engine seat order untouched: who starts the next round, and the multiple-catcher tie-break, keep ranking by the original seat order
+- [x] Vertical scoresheet (Big Board) keeps its columns in the original seat order for the whole game
+- [x] Rearranging the ring can never alter a past round; the round history stays the single source of truth
+- [x] **Added during the build:** confirmation before "New game" clears a scoresheet, deliberately conditional, shown only once a round has been recorded, and never in the error-recovery state where that button is the only way out
+- [x] **Added during the build:** Play-screen action buttons moved from three rows to two, freeing screen space; short visible labels with the full wording kept for screen readers
 
 ### Tests (Bugsy)
-- [ ] End-game confirmation: cancelling leaves the game running untouched, confirming ends it, and the game cannot be ended without confirming
-- [ ] Seat rearrangement: the ring order changes on screen, and the saved order survives a reload
-- [ ] Seat rearrangement does **not** change who starts the next round, the multiple-catcher tie-break, the round history, or the scoresheet column order
-- [ ] Regression check that v1.0 scoring behaviour is unchanged; full suite green plus a clean production build
+- [x] End-game confirmation: cancelling leaves the game running untouched, confirming ends it, and the game cannot be ended without confirming
+- [x] Seat rearrangement: the ring order changes on screen, and the saved order survives a reload
+- [x] Seat rearrangement does **not** change who starts the next round, the multiple-catcher tie-break, the round history, or the scoresheet column order
+- [x] Regression check that v1.0 scoring behaviour is unchanged; full suite green plus a clean production build — *671 tests green, up from 376 at v1.0; clean type-check and clean production build; the scoring engine was never touched*
+- [x] Saved-game compatibility in both directions: a v1.0 save opens under v1.1, and a v1.1 save opens under v1.0, so a rollback is safe
 
 ### Review & release
-- [ ] Holmes review of the v1.1 diff
-- [ ] Bugsy full test pass
-- [ ] Twiggy UX review: the confirmation's wording and prominence, and the rearrange interaction on a real phone including 5 and 6 players
-- [ ] Deploy via Wells (merge to `main` publishes automatically) and record the release
+- [x] Holmes review of the v1.1 diff — *four rounds of review across the build*
+- [x] Bugsy full test pass
+- [x] Twiggy UX review: the confirmation's wording and prominence, and the rearrange interaction on a real phone including 5 and 6 players
+- [x] Roger's own device verification — *tested on his own Android phone; all six review items passed, and he authorised the deploy on that basis*
+- [~] Deploy via Wells (merge to `main` publishes automatically) and record the release — *release authorised by Roger and running now; the project documents are updated. The `v1.1` tag is created after the live app is verified in production, as `v1.0` was. Ticks when the live app is confirmed and tagged.*
 
 ---
 
 ## Current Focus
-**Phase 14, the v1.1 build.** v1.0 is live and Phases 0 to 13 are all delivered (see PROJECT.md `## Current Status` for the released state: live URL, public repo, and the fingerprint-verified `v1.0` tag). The plan has reopened for **v1.1**, approved by Roger on 2026-07-29: a confirmation step before "End game" ends a game, and a way to rearrange the circular table view so the ring matches where people are actually sitting. Turing builds; Holmes, Bugsy, and Twiggy review; Wells deploys. Nothing in Phase 14 is ticked yet, so every box there is genuinely outstanding.
+**This plan is complete. See PROJECT.md `## Current Status` for the live state of the project.**
 
-Two of the three items left over from v1.0 are now **closed**: Roger has accepted the current app icon as-is, and Roger has done the device-test pass himself. One item remains open, the Vite/Vitest **dev-tooling security bump**, still deferred by Roger's decision because it touches only the local build-and-test tooling and never the installed app.
+Phases 0 to 13 delivered v1.0, and Phase 14 has delivered v1.1: the build, the tests, and the reviews are all done, and Roger has verified v1.1 on his own Android phone and authorised the release. The one box still open is the publication step itself, which Wells is running now, and the `v1.1` tag that follows once the live app is verified in production.
+
+Ongoing work that does **not** belong to this plan is tracked as the ranked follow-up list in PROJECT.md `## Current Status`. Nothing new should be added here. When the next release is scoped, open a new phase rather than reopening a finished one.
