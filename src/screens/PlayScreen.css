@@ -145,34 +145,85 @@
   font-size: 0.9rem;
 }
 
+/* --- Action row: four controls, TWO PER ROW ------------------------------
+ *
+ * All four live in ONE wrapping container. They used to be split across two
+ * containers ("End game" had its own row), and with `min-width: 120px` the first
+ * three then wrapped to two lines of their own, so the Play screen rendered THREE
+ * rows of buttons on a real Android phone. Two rows is the requirement; three was
+ * the bug.
+ *
+ * TWO PER ROW IS GUARANTEED BY ARITHMETIC, not by measurement. Each button's
+ * flex-basis is `calc(50% - 4px)`, i.e. exactly half a row minus half the gap, so
+ * two fill a line precisely and a third cannot join them (three would need 150% of
+ * the line plus two gaps). `min-width: 0` switches off the automatic minimum size,
+ * so a long label can never push its own box wider than its share — that is what
+ * stops content deciding the layout, and it is why the labels are wrapped in
+ * truncating spans below. Four buttons therefore land on exactly two rows at every
+ * width, and one button (the circle-only "Seats") on exactly one.
+ *
+ * MEASURED FIT of the widest label, "↩ Undo Round", against the space a column
+ * gives it (column width minus 10px padding each side and 2px border each side):
+ *              column   text box   Nunito   Baloo 2
+ *   320px        140px      116px    102px      99px
+ *   360px        160px      136px    102px      99px
+ *   375px        168px      144px    102px      99px
+ * So the full labels fit with 14px+ to spare even on the narrowest phone still in
+ * use, and there was NO need to reduce the face size to make room. (Advances read
+ * out of the bundled woff2 files at the default weight; the UI renders at weight 800,
+ * which is a few percent wider, hence keeping the ellipsis fallback below.)
+ *
+ * ONE ROW where there is genuinely room: from 470px up, the two abbreviated buttons
+ * take only what they need and the two full ones share the rest. All four then need
+ * 397px (Nunito) / 385px (Baloo 2) against 438px of frame, so 41–53px of slack,
+ * comfortably absorbing the weight-800 uplift. 470px is deliberately NOT the tightest
+ * breakpoint that works: at 430px the numbers are 397px against 398px, i.e. one pixel,
+ * which is a coin toss rather than a layout. The honest consequence is that no common
+ * phone in PORTRAIT gets one row at this face size — one row shows up in landscape and
+ * on tablets. Two rows on a phone is what was asked for. And if a face ever did overrun
+ * the wide branch, it wraps to 3+1: still two rows, never three.
+ *
+ * The 50px min-height override is left as it was: it is below the project's own 56px
+ * floor, but that is a pre-existing app-wide item deliberately excluded from this
+ * work rather than something this change introduces.
+ */
 .play__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   margin-top: auto;
 }
 
 .play__actions .btn {
-  flex: 1;
-  min-width: 120px;
+  flex: 1 1 calc(50% - 4px);
+  min-width: 0;
   min-height: 50px;
+  padding: 0 10px;
   font-size: 0.95rem;
 }
 
-/* "End game" gets its own row, separated by a rule and pushed to the trailing
-   edge. It is the only irreversible action on this screen and must not sit a
-   thumb-width from the routine controls above it. */
-.play__end-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+/* Relax to a single row on wider screens. Ordered after the rule above because both
+   selectors carry the same specificity. */
+@media (min-width: 470px) {
+  .play__actions .btn {
+    flex: 1 1 auto;
+  }
+  .play__actions .play__action--compact {
+    flex: 0 0 auto;
+  }
 }
 
-.play__end-btn {
-  min-height: 50px;
-  font-size: 0.95rem;
+/* The label must fail CLEANLY — truncated inside its own button — rather than
+   spilling across the neighbouring one. `text-overflow` does nothing on the
+   anonymous text child of a flex container, so the label needs a block-level box of
+   its own; same approach as the rearrange action bar. */
+.play__actions-label {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* --- Join card ----------------------------------------------------------- */

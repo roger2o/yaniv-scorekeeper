@@ -16,7 +16,17 @@
  * offer undo instead of a blank screen.
  *
  * "End game" is UNRECOVERABLE (undo covers only the most recent round), so it
- * goes through a confirmation step first — see ConfirmDialog.
+ * goes through a confirmation step first — see ConfirmDialog. With that fail-safe in
+ * place it shares the action row with the routine controls rather than sitting apart
+ * from them, which buys back a whole row of screen height (Roger's call, reversing
+ * an earlier recommendation to separate it).
+ *
+ * ACTION LABELS. The row carries four controls in the space of two, so the two
+ * occasional ones are abbreviated on screen ("⇄ Seats", "End"). Every button keeps
+ * its FULL wording as its accessible name, so a screen-reader or voice-control user
+ * never hears "End" for a control that ends the game. In each case the visible text
+ * is a substring of the accessible name, which is what WCAG 2.5.3 (Label in Name)
+ * requires and what keeps voice commands like "tap Seats" working.
  *
  * "Rearrange seats" lets the scorekeeper match the ring to players who have
  * physically swapped seats. It is DISPLAY ONLY and affects nothing but this
@@ -219,52 +229,48 @@ export function PlayScreen() {
           </div>
         </div>
       ) : (
-        <div className="play__actions">
+        /* ALL FOUR actions share ONE container, two per row. See PlayScreen.css for
+           the layout, and the header comment above for the labelling rules. */
+        <div className="play__actions" data-testid="play-actions">
           <button
             type="button"
             className="btn btn--secondary"
+            aria-label="Add player"
             onClick={() => setAddingPlayer(true)}
           >
-            ＋ Add player
+            <span className="play__actions-label">＋ Add Player</span>
           </button>
           <button
             type="button"
             className="btn btn--secondary"
+            aria-label="Undo round"
             onClick={undoLastRound}
             disabled={state.history.length === 0}
           >
-            ↩ Undo round
+            <span className="play__actions-label">↩ Undo Round</span>
           </button>
           {/* Rearranging is a CIRCLE-VIEW-ONLY preference, so it is only offered
-              while the circle view is the one in use. Deliberately the QUIETEST
-              variant in this row: Undo is used every single round, this is a rare
-              display tidy-up, and the visual weight should say so. */}
+              while the circle view is the one in use. */}
           {!useBoard && (
             <button
               ref={rearrangeRef}
               type="button"
-              className="btn btn--ghost"
+              className="btn btn--ghost play__action--compact"
+              aria-label="Rearrange seats"
               onClick={() => setRearranging(true)}
             >
-              ⇄ Rearrange seats
+              <span className="play__actions-label">⇄ Seats</span>
             </button>
           )}
-        </div>
-      )}
-
-      {/* "End game" is the one IRREVERSIBLE action on this screen, so it does not
-          share a row with the routine controls. Sitting a thumb-width from a
-          harmless display preference is how mis-taps happen. */}
-      {!addingPlayer && (
-        <div className="play__end-row">
           <button
             ref={endGameRef}
             type="button"
-            className="btn btn--ghost play__end-btn"
+            className="btn btn--ghost play__action--compact"
+            aria-label="End game"
             aria-haspopup="dialog"
             onClick={() => setConfirmingEnd(true)}
           >
-            End game
+            <span className="play__actions-label">End</span>
           </button>
         </div>
       )}

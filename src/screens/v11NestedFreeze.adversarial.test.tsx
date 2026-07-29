@@ -652,10 +652,14 @@ describe('NESTED FREEZE — the real app is unharmed', () => {
     fireEvent.click(screen.getByTestId('help-button'));
     // The freeze is real: the End game button is now inside an aria-hidden subtree.
     expect(screen.queryByRole('button', { name: /^End game$/ })).toBeNull();
+    // Poked directly rather than via an ARIA query, because with Help open this
+    // button sits inside an aria-hidden subtree. Located by its accessible name:
+    // "End game" now shares the action row and no longer has a row of its own, so
+    // there is no longer a layout class to hang this on.
     const trigger = screen
       .getByTestId('ring-view')
       .closest('.app-frame')!
-      .querySelector<HTMLElement>('.play__end-btn')!;
+      .querySelector<HTMLElement>('[aria-label="End game"]')!;
     fireEvent.click(trigger);
     expect(layers()).toHaveLength(2);
 
@@ -674,10 +678,14 @@ describe('NESTED FREEZE — the real app is unharmed', () => {
   it('the phone is killed with Help nested inside the confirmation: nothing is left locked', () => {
     renderApp();
     fireEvent.click(screen.getByTestId('help-button'));
+    // Poked directly rather than via an ARIA query, because with Help open this
+    // button sits inside an aria-hidden subtree. Located by its accessible name:
+    // "End game" now shares the action row and no longer has a row of its own, so
+    // there is no longer a layout class to hang this on.
     const trigger = screen
       .getByTestId('ring-view')
       .closest('.app-frame')!
-      .querySelector<HTMLElement>('.play__end-btn')!;
+      .querySelector<HTMLElement>('[aria-label="End game"]')!;
     fireEvent.click(trigger);
     expect(layers()).toHaveLength(2);
 

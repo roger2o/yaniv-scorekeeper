@@ -107,6 +107,121 @@ describe('PlayScreen — undo and standings', () => {
   });
 });
 
+/**
+ * The action row: four controls in the space of two.
+ *
+ * WHAT IS AND IS NOT COVERED HERE, stated plainly. jsdom has no layout engine, so
+ * NO test in this repo can assert how many ROWS the buttons occupy — the "never
+ * three rows" guarantee lives in flex arithmetic (a `calc(50% - 4px)` basis plus
+ * `min-width: 0`) and in the measurements recorded in PlayScreen.css, and it needs a
+ * real screen to confirm. What IS pinned here is the structural cause of the
+ * three-row bug: the buttons being split across two containers, and labels able to
+ * widen their own box. Both are testable, and both are what regressed.
+ */
+describe('PlayScreen — the four action buttons form one row group', () => {
+  it('all four live in ONE container, with no separate row for End game', () => {
+    renderPlay(threePlayers(), [{ callerId: 'a', hands: { a: 3, b: 8, c: 12 } }]);
+    const actions = screen.getByTestId('play-actions');
+    const buttons = actions.querySelectorAll('button');
+    expect(buttons.length).toBe(4);
+    // The three-row bug was caused by "End game" sitting in a container of its own,
+    // so the first three wrapped to two lines and it added a third.
+    expect(document.querySelector('.play__end-row')).toBeNull();
+    expect(
+      Array.from(buttons).map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Add player', 'Undo round', 'Rearrange seats', 'End game']);
+  });
+
+  it('shows the abbreviated labels Roger specified, glyphs included', () => {
+    renderPlay(threePlayers());
+    const actions = screen.getByTestId('play-actions');
+    expect(
+      Array.from(actions.querySelectorAll('.play__actions-label')).map(
+        (l) => l.textContent,
+      ),
+    ).toEqual(['＋ Add Player', '↩ Undo Round', '⇄ Seats', 'End']);
+  });
+
+  it('keeps the FULL wording as the accessible name of every button', () => {
+    renderPlay(threePlayers());
+    for (const name of ['Add player', 'Undo round', 'Rearrange seats', 'End game']) {
+      expect(screen.getByRole('button', { name })).toBeTruthy();
+    }
+  });
+
+  it('"End" is NOT the accessible name of the game-ending control', () => {
+    renderPlay(threePlayers());
+    // A screen reader or voice-control user must never be offered a bare "End" for
+    // the one irreversible action on the screen.
+    expect(screen.queryByRole('button', { name: 'End' })).toBeNull();
+    const end = screen.getByRole('button', { name: 'End game' });
+    expect(end.textContent).toBe('End');
+    expect(end.getAttribute('aria-label')).toBe('End game');
+    // The visible text stays a substring of the accessible name (WCAG 2.5.3), so
+    // "tap End" and "tap End game" both work by voice.
+    expect('End game'.toLowerCase()).toContain(end.textContent!.toLowerCase());
+  });
+
+  it('every label can truncate rather than spill across its neighbour', () => {
+    renderPlay(threePlayers());
+    const labels = screen
+      .getByTestId('play-actions')
+      .querySelectorAll('.play__actions-label');
+    // A block-level label box is what makes text-overflow work at all: it does
+    // nothing on the anonymous text child of a flex container. Removing these spans
+    // would let a wider font face spill a label over the next button.
+    expect(labels.length).toBe(4);
+    for (const label of Array.from(labels)) {
+      expect(label.tagName).toBe('SPAN');
+      expect(label.parentElement?.tagName).toBe('BUTTON');
+    }
+  });
+
+  it('the End button still routes through the confirmation from the shared row', () => {
+    renderPlay(threePlayers(), [{ callerId: 'a', hands: { a: 3, b: 8, c: 12 } }]);
+    const end = screen.getByRole('button', { name: 'End game' });
+    expect(end.getAttribute('aria-haspopup')).toBe('dialog');
+
+    fireEvent.click(end);
+    // Moving it into the shared row must not have bypassed the fail-safe.
+    expect(screen.getByTestId('confirm-end-game')).toBeTruthy();
+    expect(screen.getByTestId('ring-view')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('confirm-end-game-cancel'));
+    expect(screen.queryByTestId('confirm-end-game')).toBeNull();
+  });
+
+  it('keeps the weight hierarchy: every-round controls prominent, End quiet', () => {
+    renderPlay(threePlayers());
+    // Abbreviating "End game" to "End" must not make it visually dominant.
+    for (const name of ['Add player', 'Undo round']) {
+      expect(screen.getByRole('button', { name }).className).toContain('btn--secondary');
+    }
+    for (const name of ['Rearrange seats', 'End game']) {
+      expect(screen.getByRole('button', { name }).className).toContain('btn--ghost');
+    }
+  });
+
+  it('drops to three buttons on the big board, where Seats does not apply', () => {
+    const seven: GameSettings = {
+      players: Array.from({ length: 7 }, (_, i) => ({
+        id: `p${i}`,
+        name: `P${i}`,
+        seat: i,
+      })),
+      threshold: 7,
+      halvingEnabled: false,
+      knockoutScore: null,
+    };
+    renderPlay(seven);
+    const buttons = screen.getByTestId('play-actions').querySelectorAll('button');
+    expect(Array.from(buttons).map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Add player',
+      'Undo round',
+      'End game',
+    ]);
+  });
+});
+
 describe('PlayScreen — mid-game join', () => {
   it('adds a seat via the addPlayer affordance', () => {
     renderPlay(threePlayers(), [{ callerId: 'a', hands: { a: 3, b: 8, c: 12 } }]);
