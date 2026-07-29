@@ -196,13 +196,15 @@ The first release after v1.0. Two additions Roger approved on 2026-07-29: a conf
 - [x] Bugsy full test pass
 - [x] Twiggy UX review: the confirmation's wording and prominence, and the rearrange interaction on a real phone including 5 and 6 players
 - [x] Roger's own device verification — *tested on his own Android phone; all six review items passed, and he authorised the deploy on that basis*
-- [~] Deploy via Wells (merge to `main` publishes automatically) and record the release — *release authorised by Roger and running now; the project documents are updated. The `v1.1` tag is created after the live app is verified in production, as `v1.0` was. Ticks when the live app is confirmed and tagged.*
+- [x] Deploy via Wells (merge to `main` publishes automatically) and record the release — *live at https://yaniv-scorekeeper.netlify.app; tag `v1.1` at commit `3157e22`, which is also the tip of `main` and the commit actually being served (clean fast-forward, no merge commit). Verified in production on six checks, plus all 22 offline files served individually; the platform's build matched the locally verified copy bit for bit. One check still owed: the on-a-phone airplane-mode play-through (see PROJECT.md `## Current Status`).*
 
 ---
 
 ## Current Focus
 **This plan is complete. See PROJECT.md `## Current Status` for the live state of the project.**
 
-Phases 0 to 13 delivered v1.0, and Phase 14 has delivered v1.1: the build, the tests, and the reviews are all done, and Roger has verified v1.1 on his own Android phone and authorised the release. The one box still open is the publication step itself, which Wells is running now, and the `v1.1` tag that follows once the live app is verified in production.
+Phases 0 to 13 delivered v1.0, and Phase 14 has delivered v1.1: built, tested, reviewed, verified by Roger on his own Android phone, published, verified in production, and tagged `v1.1` at commit `3157e22`. Every box in Phase 14 is now ticked.
+
+One box remains open elsewhere in the plan, deliberately: the dependency sweep in Phase 12, which Roger has deferred to a separate tooling pass. It is left as in-progress rather than tidied to look finished, because it genuinely is not.
 
 Ongoing work that does **not** belong to this plan is tracked as the ranked follow-up list in PROJECT.md `## Current Status`. Nothing new should be added here. When the next release is scoped, open a new phase rather than reopening a finished one.
