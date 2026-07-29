@@ -118,6 +118,55 @@ describe('PlayScreen — undo and standings', () => {
  * three-row bug: the buttons being split across two containers, and labels able to
  * widen their own box. Both are testable, and both are what regressed.
  */
+describe('PlayScreen — the centre "New Round" button', () => {
+  it('reads "New Round" with no leading glyph, in the circle view', () => {
+    renderPlay(threePlayers());
+    const ring = screen.getByTestId('ring-view');
+    const button = ring.querySelector<HTMLElement>('.ring__new-round')!;
+    // The glyph is gone: the words carry it, and it centres properly on the ring
+    // without a leading character pulling the label off to one side.
+    expect(button.textContent).not.toContain('＋');
+    expect(button.textContent).not.toContain('+');
+    // Capital R, as specified.
+    expect(button.textContent).toBe('New Round');
+  });
+
+  it('has a properly spaced accessible name, not "NewRound"', () => {
+    renderPlay(threePlayers());
+    // The label is split across two lines by a <br />, which contributes NOTHING to
+    // the text content — so without an explicit space the accessible name collapses
+    // to one word and is announced that way. Pinned because it is invisible on
+    // screen and therefore very easy to "tidy" back out.
+    expect(screen.getByRole('button', { name: 'New Round' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'NewRound' })).toBeNull();
+  });
+
+  it('reads "New Round" on the big board too, so the same action reads the same', () => {
+    const seven: GameSettings = {
+      players: Array.from({ length: 7 }, (_, i) => ({
+        id: `p${i}`,
+        name: `P${i}`,
+        seat: i,
+      })),
+      threshold: 7,
+      halvingEnabled: false,
+      knockoutScore: null,
+    };
+    renderPlay(seven);
+    const button = screen.getByRole('button', { name: 'New Round' });
+    expect(button.textContent).toBe('New Round');
+    expect(button.textContent).not.toContain('＋');
+  });
+
+  it('still opens round entry', () => {
+    renderPlay(threePlayers());
+    fireEvent.click(screen.getByRole('button', { name: 'New Round' }));
+    // Dropping the glyph must not have disturbed what the button actually does.
+    expect(screen.queryByTestId('ring-view')).toBeNull();
+    expect(screen.getByRole('heading', { name: /Who called/i })).toBeTruthy();
+  });
+});
+
 describe('PlayScreen — the four action buttons form one row group', () => {
   it('all four live in ONE container, with no separate row for End game', () => {
     renderPlay(threePlayers(), [{ callerId: 'a', hands: { a: 3, b: 8, c: 12 } }]);

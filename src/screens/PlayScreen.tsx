@@ -4,12 +4,12 @@
  * Default is the CIRCLE VIEW (phone flat on the table): players around a ring in
  * SEAT ORDER, each score rotated to face their own seat (snapped to 0/90/180/
  * 270), the scorekeeper upright at the bottom. Centre holds the round number and
- * the big ＋ New Round button. Who STARTS NEXT is marked with a glow ring + an
+ * the big New Round button. Who STARTS NEXT is marked with a glow ring + an
  * arrow + the words (never colour alone; never "deals/dealer"). The leader wears
  * a crown. 7+ players (or a manual toggle) fall back to the upright big-board
  * <table>.
  *
- * Tapping ＋ New Round opens the ENTRY VIEW (RoundEntry). Standings never reorder
+ * Tapping New Round opens the ENTRY VIEW (RoundEntry). Standings never reorder
  * by score. An "add player" affordance joins a latecomer mid-game. Undo reverts
  * the last round. If an edit/undo makes the engine reject the game (e.g. a
  * recorded join no longer has a round to land in), we show a plain message and
@@ -393,10 +393,14 @@ function RingView({
           className="ring__new-round card-button"
           onClick={onNewRound}
         >
-          ＋<br />
-          New
+          {/* The explicit space is load-bearing, not stray formatting: without it the
+              two text nodes sit either side of the <br /> with nothing between them,
+              textContent is "NewRound", and that is exactly what a screen reader
+              announces for the most-used control in the app. The space is collapsed
+              at the end of the line, so it costs nothing visually. */}
+          New{' '}
           <br />
-          round
+          Round
         </button>
       </div>
     </div>
@@ -413,7 +417,7 @@ function BigBoardView({ game, onNewRound }: { game: GameState; onNewRound: () =>
       <div className="play__board-head">
         <span className="play__round-pill tabular">Round {game.rounds.length + 1}</span>
         <button type="button" className="btn btn--primary" onClick={onNewRound}>
-          ＋ New round
+          New Round
         </button>
       </div>
       <BigBoard game={game} />

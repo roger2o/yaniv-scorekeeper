@@ -36,7 +36,7 @@ export const MAX_RING_PLAYERS = 6;
 /**
  * Ring radius as a percentage of half the container. The chip centre sits this
  * far from the ring centre (50%, 50%). 38% keeps the chips clear of the centre
- * "New round" button and inside the container edge given their own width.
+ * "New Round" button and inside the container edge given their own width.
  */
 const RING_RADIUS_PCT = 38;
 
