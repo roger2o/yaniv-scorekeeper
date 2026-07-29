@@ -184,8 +184,10 @@
 
    NO safe-area inset here. This used to add `max(10px, env(safe-area-inset-bottom))`
    as bottom padding, which DOUBLE-COUNTS: floor.css already applies the safe-area
-   insets as padding on <body>, so the whole frame — and therefore this bar — is
-   already clear of the home indicator. On a notched iPhone the extra inset pushed a
+   insets as padding on <body>, and this bar is IN-FLOW content inside body, so the
+   whole frame — and therefore this bar — is already clear of the home indicator.
+   (The two dialog backdrops are `position: fixed` and so are NOT covered by that;
+   they keep their own insets. The distinction is written up in floor.css.) On a notched iPhone the extra inset pushed a
    ~78px bar to ~102px, and since this bar is permanently visible that was a
    permanent 24px stolen from the list it exists to protect. Sticky `bottom: 0` is
    clamped by the containing block, which is inside the padded body, so it still

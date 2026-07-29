@@ -35,7 +35,19 @@ body {
   transition: background-color var(--dur-base) var(--ease-out),
     color var(--dur-base) var(--ease-out);
   -webkit-font-smoothing: antialiased;
-  /* Respect notches / safe areas on phones held at the table. */
+  /* Respect notches / safe areas on phones held at the table.
+   *
+   * THIS COVERS IN-FLOW CONTENT ONLY, and the distinction matters — there are four
+   * `env(safe-area-inset-*)` uses in src/ and they are NOT redundant with each
+   * other. Anything laid out inside <body> (every screen, including the rearrange
+   * action bar) is already inset by this rule and must NOT add its own, or it
+   * double-counts: the rearrange bar did exactly that and stole ~24px of list
+   * height on a notched iPhone. But a `position: fixed` element is laid out against
+   * the VIEWPORT, not against body's padding box, so body's padding does not inset
+   * it at all and it genuinely needs its own — which is why the two dialog
+   * backdrops (ConfirmDialog.css, HelpDialog.css) keep theirs. Do not "simplify"
+   * those away on the grounds that floor.css handles it; that would push both
+   * dialogs under the notch and the home indicator. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
     env(safe-area-inset-bottom) env(safe-area-inset-left);
 }

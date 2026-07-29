@@ -85,9 +85,23 @@ import { createPortal } from 'react-dom';
  *
  * That last point is why there is no "restore the stale snapshot before capturing a
  * new one" step: with per-element records there is nothing stale to restore, because
- * nothing is ever recaptured. The one thing this cannot fix is a leaked layer with
- * NO later dialog — the page simply stays frozen — but that is a caller bug (a
- * ModalLayer detached without unmounting) and there is nothing to hook to fix it.
+ * nothing is ever recaptured.
+ *
+ * RESIDUAL LIMITS, stated accurately. An earlier version of this note claimed a
+ * leaked layer with no later dialog left the page frozen with "nothing to hook to
+ * fix it". That was wrong, and wrong in the direction that stops the next person
+ * looking, so the hook now exists: `pruneAndRecover` releases the freeze the moment
+ * pruning empties the registry, which happens on Escape (a leaked dialog's
+ * document-level listener is still live) as well as on any later dialog opening or
+ * closing. What remains is narrower — a leaked layer, no later dialog, and the user
+ * never pressing Escape. That one is not worth hooking: there is no event left to
+ * hang it on short of polling, and it is reachable only through a caller bug (a
+ * ModalLayer detached without unmounting) that does not exist in this app.
+ *
+ * A NEARBY CASE THAT IS NOT A GAP: a ghost layer left CONNECTED is never pruned, so
+ * the page stays frozen even while later dialogs come and go. That is correct, not
+ * missed — a connected layer means the dialog is still mounted and visibly on
+ * screen, and a page behind a visible dialog is supposed to be frozen.
  */
 const openLayers: HTMLElement[] = [];
 
@@ -122,6 +136,27 @@ function isLayerContainer(el: Element): boolean {
 function pruneDetached(): void {
   for (let i = openLayers.length - 1; i >= 0; i -= 1) {
     if (!openLayers[i]!.isConnected) openLayers.splice(i, 1);
+  }
+}
+
+/**
+ * Prune, and if pruning emptied the registry, RELEASE any freeze still applied.
+ *
+ * This is the recovery path for a layer that vanished without its cleanup running.
+ * An empty registry means no dialog is open, so a page that is still frozen at that
+ * moment is frozen by nobody and the freeze should go. `thawAll` is idempotent, so
+ * calling it here is safe even when a caller thaws again immediately afterwards.
+ *
+ * It fires on the paths a stuck user actually touches: pressing Escape (the
+ * document-level listener of the leaked dialog is still live and calls
+ * `isInTopModalLayer`), and opening or closing any later dialog. Deliberately NOT
+ * called from `applyFreeze`, which would thaw and then immediately re-freeze
+ * everything, since `applyFreeze` with an empty registry has no top layer to spare.
+ */
+function pruneAndRecover(): void {
+  pruneDetached();
+  if (openLayers.length === 0 && (preFreeze.size > 0 || scrollLocked)) {
+    thawAll();
   }
 }
 
@@ -169,6 +204,12 @@ function thawAll(): void {
     if (previous.inert) el.setAttribute('inert', '');
     else el.removeAttribute('inert');
   }
+  // MUST clear. Records are written once per element and never overwritten, which
+  // is what makes an already-frozen page impossible to mistake for the true one —
+  // but that invariant only holds if a record cannot outlive its own cycle. A record
+  // left behind here would be treated as truth by the NEXT cycle and would write a
+  // stale value over a legitimately changed one, turning the invariant into the very
+  // hazard it exists to prevent. Do not remove this line.
   preFreeze.clear();
 
   if (scrollLocked) {
@@ -179,7 +220,7 @@ function thawAll(): void {
 }
 
 function acquireFreeze(container: HTMLElement): void {
-  pruneDetached();
+  pruneAndRecover();
   // Note the lock is keyed on `scrollLocked`, not on the layer count: if a leaked
   // layer left the page locked, the true pre-lock value is still held here and
   // must not be overwritten with the locked one.
@@ -193,7 +234,7 @@ function acquireFreeze(container: HTMLElement): void {
 }
 
 function releaseFreeze(container: HTMLElement): void {
-  pruneDetached();
+  pruneAndRecover();
   const index = openLayers.indexOf(container);
   if (index !== -1) openLayers.splice(index, 1);
 
@@ -215,7 +256,7 @@ function releaseFreeze(container: HTMLElement): void {
  * ModalLayer still responds to Escape.
  */
 export function isInTopModalLayer(node: Node | null): boolean {
-  pruneDetached();
+  pruneAndRecover();
   const top = openLayers[openLayers.length - 1];
   if (top === undefined) return true;
   return node !== null && top.contains(node);

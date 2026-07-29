@@ -16,12 +16,14 @@
  */
 
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { createRoot } from 'react-dom/client';
 import { useEffect } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StoreProvider, useStore } from '../state';
 import { ThemeProvider } from '../theme';
 import { PlayScreen } from './PlayScreen';
 import { EndGameScreen } from './EndGameScreen';
+import { ConfirmDialog } from './ConfirmDialog';
 import { FakeStorage } from '../state/test-helpers';
 import type { GameSettings, RoundEntry } from '../engine';
 
@@ -199,6 +201,73 @@ describe('End game — confirming ends it exactly as before', () => {
  * unmounting — the only way to reach the cleanup-never-runs state — and which does
  * fail when pruneDetached is gutted.
  */
+
+describe('End game — a leaked dialog can be un-stuck without opening another', () => {
+  /**
+   * The recovery path for the one residual hazard: a ModalLayer that leaves the
+   * document without its cleanup running leaves the page frozen with nothing on
+   * screen. Recovery used to require opening and closing ANOTHER dialog, which a
+   * stuck user has no reason to think of. It now also happens on Escape, because a
+   * leaked dialog's document-level listener is still live and consults the layer
+   * registry, which prunes and releases the freeze.
+   *
+   * The orphan needs its OWN React root: inside the app tree React would run the
+   * cleanup and the state under test could not be reached.
+   */
+  it('Escape releases a freeze left behind by a layer whose cleanup never ran', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onCancel = vi.fn();
+
+    act(() => {
+      root.render(
+        <ThemeProvider initialTheme="felt">
+          <ConfirmDialog
+            testId="orphan"
+            title="Orphan"
+            confirmLabel="Do it"
+            cancelLabel="Keep playing"
+            returnFocusTo={null}
+            onCancel={onCancel}
+            onConfirm={() => undefined}
+          >
+            Body
+          </ConfirmDialog>
+        </ThemeProvider>,
+      );
+    });
+
+    try {
+      // `host` is the orphan root's own element, i.e. page content behind the
+      // dialog, so it is frozen while the dialog is open.
+      const layer = document.querySelector('.modal-layer')!;
+      expect(host.hasAttribute('inert')).toBe(true);
+      expect(document.body.style.overflow).toBe('hidden');
+
+      // Rip the portal container out WITHOUT unmounting: the cleanup never runs, so
+      // the freeze it applied has nobody left to release it.
+      layer.remove();
+      expect(document.body.style.overflow).toBe('hidden');
+      expect(host.hasAttribute('inert')).toBe(true);
+
+      // A stuck user presses Escape. No other dialog is opened.
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+
+      expect(document.body.style.overflow).toBe('');
+      expect(host.hasAttribute('inert')).toBe(false);
+      expect(host.hasAttribute('aria-hidden')).toBe(false);
+      // The leaked dialog's own close handler still ran, since it is now the top.
+      expect(onCancel).toHaveBeenCalled();
+    } finally {
+      // Must run even on failure: an orphan root left mounted keeps a live
+      // document keydown listener and would corrupt every later test in the file.
+      act(() => root.unmount());
+      host.remove();
+      document.body.style.overflow = '';
+    }
+  });
+});
 
 describe('End game — focus is never returned into a frozen background', () => {
   /**

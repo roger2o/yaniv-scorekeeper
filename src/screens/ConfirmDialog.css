@@ -20,7 +20,11 @@
 
 .confirm-backdrop {
   align-items: center;
-  /* Respect notches, but never let a safe-area of 0 collapse the gutter. */
+  /* Respect notches, but never let a safe-area of 0 collapse the gutter.
+     These insets are REQUIRED and are not duplicating floor.css: this is a
+     `position: fixed` surface, so it is laid out against the viewport and body's
+     safe-area padding does not inset it. See the note in floor.css before
+     "simplifying" any of the four env() uses in src/. */
   padding: max(16px, env(safe-area-inset-left)) 16px
     max(16px, env(safe-area-inset-bottom));
   padding-top: max(16px, env(safe-area-inset-top));

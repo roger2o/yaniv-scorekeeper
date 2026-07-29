@@ -13,7 +13,9 @@
 .help-backdrop {
   align-items: flex-end;
   padding: 0;
-  /* Respect notches / safe areas. */
+  /* Respect notches / safe areas. REQUIRED here, and not duplicating floor.css:
+     this is a `position: fixed` surface laid out against the viewport, so body's
+     safe-area padding does not inset it. See the note in floor.css. */
   padding-top: env(safe-area-inset-top);
 }
 
