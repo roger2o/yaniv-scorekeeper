@@ -41,6 +41,8 @@ Two features Roger asked for, and two smaller additions he approved while the wo
 - Multi-device sync, accounts, online play.
 - Any card-game simulation (dealing, hand validation, run/set legality).
 
+- **Remove player mid-game** — allow a player to be removed from the game while it is in progress.
+
 ## Scoring Engine (the core logic)
 
 For a round where the caller's hand value is `C` and the lowest *other* player's hand value is `L`:
