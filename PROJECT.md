@@ -45,6 +45,8 @@ Two features Roger asked for, and two smaller additions he approved while the wo
 
 - **Keep screen on toggle** — a setting to keep the phone screen awake at all times while the app is open. Should be a toggle: on by default (screen stays on), or off to allow the phone to sleep normally and save battery.
 
+- **Yaniv count includes Asaf** — at end-of-game, the Yaniv count per player should show both successful Yanivs and unsuccessful ones (caught in Asaf) combined as a total. E.g. 6 successful + 2 Asaf = shown as 8. Consider colour-coding to distinguish the two, but not a hard requirement.
+
 ## Scoring Engine (the core logic)
 
 For a round where the caller's hand value is `C` and the lowest *other* player's hand value is `L`:
