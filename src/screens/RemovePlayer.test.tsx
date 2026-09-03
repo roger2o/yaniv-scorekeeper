@@ -18,9 +18,10 @@
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { StoreProvider, useStore } from '../state';
+import { StoreProvider, useStore, STORAGE_KEY, SCHEMA_VERSION } from '../state';
 import { ThemeProvider } from '../theme';
 import { PlayScreen } from './PlayScreen';
+import { SetupScreen } from './SetupScreen';
 import { EndGameScreen } from './EndGameScreen';
 import { FakeStorage } from '../state/test-helpers';
 import type { GameSettings, RoundEntry } from '../engine';
@@ -491,6 +492,47 @@ describe('a departure is announced, and never leaves the game unusable', () => {
     // Back to a working game, no white screen anywhere along the way.
     expect(screen.getByTestId('markers').textContent).toBe('a:-|b:-|c:-');
     expect(ringIds()).toEqual(['a', 'b', 'c']);
+  });
+});
+
+// --------------------------------------------------------------------------
+// #18 a hand-edited saved game with a bad marker is discarded, not crashed
+// --------------------------------------------------------------------------
+
+describe('#18 a corrupted departure marker never white-screens the app', () => {
+  it('lands on a clean setup screen with the non-fatal notice', () => {
+    const storage = new FakeStorage();
+    storage.seed(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: SCHEMA_VERSION,
+        state: {
+          settings: {
+            ...table(['Ann', 'Bo', 'Cy']),
+            players: [
+              { id: 'a', name: 'Ann', seat: 0 },
+              // A marker pointing past the end of recorded history: only a
+              // hand-edited or corrupted save produces this.
+              { id: 'b', name: 'Bo', seat: 1, leavesBeforeRoundIndex: 99 },
+              { id: 'c', name: 'Cy', seat: 2 },
+            ],
+          },
+          history: [{ callerId: 'a', hands: { a: 3, b: 8, c: 12 } }],
+          screen: 'play',
+        },
+      }),
+    );
+
+    render(
+      <ThemeProvider initialTheme="felt">
+        <StoreProvider storage={storage}>
+          <SetupScreen />
+        </StoreProvider>
+      </ThemeProvider>,
+    );
+    expect(
+      screen.getByText(/previous game couldn’t be restored/),
+    ).toBeTruthy();
   });
 });
 
