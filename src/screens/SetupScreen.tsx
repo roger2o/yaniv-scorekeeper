@@ -15,6 +15,7 @@ import { useStore } from '../state';
 import type { GameSettings, Threshold } from '../engine';
 import { makePlayerId, seatColorVar, seatShape } from './seat';
 import { ThemeToggle } from '../theme';
+import { ScreenAwakeToggle } from '../awake';
 import { HelpButton } from './HelpButton';
 import './SetupScreen.css';
 
@@ -96,6 +97,7 @@ export function SetupScreen() {
         </span>
         <div className="top-bar__controls">
           <HelpButton />
+          <ScreenAwakeToggle />
           <ThemeToggle />
         </div>
       </div>

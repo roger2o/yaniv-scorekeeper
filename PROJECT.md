@@ -41,11 +41,13 @@ Two features Roger asked for, and two smaller additions he approved while the wo
 - Multi-device sync, accounts, online play.
 - Any card-game simulation (dealing, hand validation, run/set legality).
 
-- **Remove player mid-game** — allow a player to be removed from the game while it is in progress.
+**v1.2 — asked for by Roger, being built now:**
 
-- **Keep screen on toggle** — a setting to keep the phone screen awake at all times while the app is open. Should be a toggle: on by default (screen stays on), or off to allow the phone to sleep normally and save battery.
+- **Remove player mid-game** — allow a player to be removed from the game while it is in progress. **Not built yet:** it changes the scoring engine's replay, so it is being designed on its own before anything is written.
 
-- **Yaniv count includes Asaf** — at end-of-game, the Yaniv count per player should show both successful Yanivs and unsuccessful ones (caught in Asaf) combined as a total. E.g. 6 successful + 2 Asaf = shown as 8. Consider colour-coding to distinguish the two, but not a hard requirement.
+- **Keep the screen on** — **BUILT.** The phone's screen is held on for as long as the app is open, so it does not lock while a hand is being played and the scorekeeper does not unlock it every round. It is a round button in the top bar next to the theme toggle, **on by default**, and one tap turns it off so the phone sleeps normally and saves battery. Like the theme it is a per-phone preference, kept separately from the saved game, so switching it can never affect a game in progress. Where a phone cannot do it at all — older iPhones and some in-app browsers — the button says so instead of pretending to work, and where a phone refuses (battery saver usually) it shows a warning rather than claiming the screen is being held on. Explained in Help under "Keep the screen on".
+
+- **Yaniv count includes Assaf** — at end-of-game, the Yaniv count per player should show both successful Yanivs and unsuccessful ones (caught in an Assaf) combined as a total. E.g. 6 successful + 2 Assaf = shown as 8. Consider colour-coding to distinguish the two, but not a hard requirement. *(Roger writes "Asaf"; the app and the code have always spelled it "Assaf", and that one spelling is kept everywhere.)*
 
 ## Scoring Engine (the core logic)
 
@@ -184,6 +186,9 @@ The full design proposal — themes, layouts, and rationale — is in `docs/ui-d
 
 *Entries are from 2026-06-02 unless a different date is given.*
 
+- **Keeping the screen on is a per-phone setting, not part of the game (2026-09-03)** — the preference is stored on its own, exactly like the theme, and deliberately **not** inside the saved game. *Why:* the saved game is the scoresheet, and anything written into it risks the game in progress; a screen preference has nothing to do with a game and outlives any number of them. The saved-game format was **not** version-bumped, so a game already in progress on someone's phone is untouched by this release.
+- **The screen is asked for again every time the app comes back to the front (2026-09-03)** — phones silently drop the "keep the screen on" hold the moment the app is backgrounded or the phone is locked, and never give it back on their own. Without asking again the feature would work once per launch and then quietly stop, which nobody would notice until the phone started locking mid-game again. *Why it is called out:* it is the single thing most likely to be got wrong here, and it is covered by a test written so that removing the re-ask makes the test fail.
+- **The button is icon-only, and that was forced by width (2026-09-03)** — the top bar already carries the app name, the Help button and the two-word theme toggle, and measured against the shipped fonts that comes to about 314px of the 288px a 320px phone gives. A second worded control would push the whole row of controls onto two lines on every phone, on the screen v1.1 spent a change tightening from three rows to two. So it is a round button matching the Help button beside it, and the row now wraps instead of running off the page on the very narrowest phones (which it did before). The cost is that an icon is less self-explanatory than a word, so the control is also explained in Help. **Roger's to overturn** if he would rather have the word and accept two rows.
 - **Multiple-catcher tie-breaking** — confirmed: lowest hand among the catchers starts the next round; ties broken by seating order after the caller.
 - **Round editing** — confirmed: most-recent-round-only for v1 (no editing of arbitrary past rounds).
 - **Distribution model** — confirmed (Reading A): the app is given to many people who each run their own **independent** game on their own device, concurrently and offline. No shared/synced game across devices (that remains deferred). Delivered as an installable PWA from a static URL; after first install each device is fully self-contained.

@@ -1,0 +1,89 @@
+/*
+ * Keep-screen-awake toggle. Shaped to match the "?" Help button it sits beside
+ * (56px round, same glyph size) so the top-bar cluster reads as one set of
+ * controls. Press feedback, focus ring and hover-gating all inherit from
+ * floor.css. Token-driven, so it skins correctly in both themes.
+ *
+ * WCAG 1.4.11 (a control's own boundary >= 3:1 against its background) and 1.4.3
+ * (text >= 4.5:1), measured per state against the PAGE surface each theme uses,
+ * Felt / Arcade:
+ *
+ *   on          fill --accent, edge --accent   4.12 / 4.59 (boundary)
+ *               glyph --accent-ink on --accent 6.81 / 4.86 (text)
+ *   off         edge --ink-muted               6.75 / 5.72 (boundary)
+ *               glyph --ink on --surface-raised 6.22 / 15.93 (text)
+ *   blocked     amber fill --warn              5.10 / 1.52 (boundary)
+ *               edge --warn-border             1.01 / 4.43 (boundary)
+ *               glyph --warn-ink on --warn     8.42 / 9.87 (text)
+ *   unsupported edge --ink-muted (dashed)      6.75 / 5.72 (boundary)
+ *               glyph --ink-muted on surface   6.75 / 5.72 (text)
+ *
+ * The `blocked` row is the one that needs reading twice: on Felt the amber FILL
+ * delineates the button (5.10) and the deep-brown edge is decorative (1.01), while
+ * on Arcade the light amber fill does not (1.52) and the coral EDGE does the job
+ * (4.43). That is the same per-theme split the install warning already relies on,
+ * for the same reason — see the --warn notes in tokens.css.
+ *
+ * The `off` edge deliberately uses --ink-muted rather than the --border-strong the
+ * Help button uses. --border-strong measures only 2.04 / 1.54 against the page
+ * surface, i.e. under the 3:1 non-text bar; --ink-muted is the token the app's
+ * other unfilled control (.btn--ghost) already borrows for exactly this reason.
+ */
+.awake-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--ink);
+  border: 2px solid var(--ink-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.awake-toggle[data-state='on'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.awake-toggle[data-state='blocked'] {
+  background: var(--warn);
+  color: var(--warn-ink);
+  border-color: var(--warn-border);
+}
+
+/* Unavailable on this phone. NOT `opacity`, which is how the app dims a
+   genuinely disabled control: dimming text is already a measured contrast
+   failure elsewhere in this app, and this state has to stay legible because it
+   is carrying information. A dashed edge plus the struck-through glyph below
+   says "not available" by shape, so the meaning survives without colour. */
+.awake-toggle[data-state='unsupported'] {
+  background: transparent;
+  color: var(--ink-muted);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+.awake-toggle[data-state='unsupported'] .awake-toggle__glyph {
+  position: relative;
+}
+
+/* The "no" stroke across the glyph — the non-colour cue for unavailable. */
+.awake-toggle[data-state='unsupported'] .awake-toggle__glyph::after {
+  content: '';
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 50%;
+  height: 2px;
+  background: currentColor;
+  transform: rotate(-45deg);
+}
+
+.awake-toggle__glyph {
+  display: inline-block;
+  line-height: 1;
+}

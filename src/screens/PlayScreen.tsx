@@ -37,6 +37,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../state';
 import type { GameState, StandingRow } from '../engine';
 import { ThemeToggle } from '../theme';
+import { ScreenAwakeToggle } from '../awake';
 import { HelpButton } from './HelpButton';
 import { RoundEntry } from './RoundEntry';
 import { Callouts } from './Callouts';
@@ -167,6 +168,7 @@ export function PlayScreen() {
         </span>
         <div className="top-bar__controls">
           <HelpButton />
+          <ScreenAwakeToggle />
           <ThemeToggle />
         </div>
       </div>

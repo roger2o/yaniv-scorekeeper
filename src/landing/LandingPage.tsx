@@ -29,6 +29,7 @@
 
 import { HowToUse, HowToPlay } from '../content/helpContent';
 import { ThemeToggle } from '../theme';
+import { ScreenAwakeToggle } from '../awake';
 import { isIosNonSafari } from './installState';
 import './LandingPage.css';
 
@@ -59,6 +60,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
           YANIV
         </span>
         <div className="top-bar__controls">
+          <ScreenAwakeToggle />
           <ThemeToggle />
         </div>
       </header>

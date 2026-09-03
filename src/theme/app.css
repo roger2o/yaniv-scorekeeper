@@ -39,9 +39,22 @@
   font-size: 1.4rem;
 }
 
-/* Right-hand cluster of top-bar controls (Help "?" + theme toggle). */
+/* Right-hand cluster of top-bar controls (Help "?" + keep-screen-awake + theme
+   toggle).
+ *
+ * IT WRAPS, AND THAT IS LOAD-BEARING. Measured from the shipped font files, the
+ * cluster is about 314px wide; the app frame gives it 288px on a 320px phone. So
+ * on the narrowest screen the app supports it does not fit on one row, and before
+ * this rule existed it did not wrap either — it overflowed the frame and pushed
+ * the page sideways. Wrapping degrades that to a second row of controls, which
+ * only happens below roughly 355px. From 360px up (which is every current phone)
+ * the cluster stays on one row, so the Play screen keeps the compact two-row
+ * layout v1.1 worked to get. `justify-content: flex-end` keeps a wrapped second
+ * row aligned under the first rather than drifting left. */
 .top-bar__controls {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
 }
