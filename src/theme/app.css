@@ -39,18 +39,38 @@
   font-size: 1.4rem;
 }
 
-/* Right-hand cluster of top-bar controls (Help "?" + keep-screen-awake + theme
+/* Right-hand cluster of top-bar controls (Help "?" + keep-the-screen-on + theme
    toggle).
  *
- * IT WRAPS, AND THAT IS LOAD-BEARING. Measured from the shipped font files, the
- * cluster is about 314px wide; the app frame gives it 288px on a 320px phone. So
- * on the narrowest screen the app supports it does not fit on one row, and before
- * this rule existed it did not wrap either — it overflowed the frame and pushed
- * the page sideways. Wrapping degrades that to a second row of controls, which
- * only happens below roughly 355px. From 360px up (which is every current phone)
- * the cluster stays on one row, so the Play screen keeps the compact two-row
- * layout v1.1 worked to get. `justify-content: flex-end` keeps a wrapped second
- * row aligned under the first rather than drifting left. */
+ * IT WRAPS, AND THAT IS LOAD-BEARING — BUT IT WRAPS ON EVERY PHONE, NOT ONLY THE
+ * NARROW ONES. An earlier version of this comment said the second row "only
+ * happens below roughly 355px" and that "from 360px up the cluster stays on one
+ * row". Neither is true, and neither had been measured.
+ *
+ * MEASURED, in headless Chromium against this built stylesheet and the bundled
+ * `nunito-latin.woff2`, on the real Play-screen markup:
+ *
+ *   width      top bar   cluster
+ *   320px      130px     wrapped   (and ~4px of the page still overflows)
+ *   360–460px  130px     wrapped
+ *   468px+      72px     one row
+ *
+ * The threshold is arithmetic, not taste: the three controls need 325px
+ * (56 + 8 + 56 + 8 + 197) and the title takes 99px, so one row needs 436px of
+ * content — 468px of screen once the frame's 16px gutters are paid for. That is
+ * wider than any current phone, so the Play screen carries a 130px top bar
+ * rather than a 72px one everywhere, costing about 58px of vertical space.
+ *
+ * WHAT THE WRAP BOUGHT, measured the same way with the third control removed and
+ * this rule off — i.e. exactly v1.1: the bar was one row at 72px, but it did not
+ * fit and did not wrap either. It pushed the whole page sideways by 68px at
+ * 320px, 28px at 360px and 13px at 375px. So the trade is 58px of height for a
+ * page that no longer scrolls sideways on the three narrowest phones people
+ * still use. Roger's decision is that the icon stays; this note is here so
+ * nobody builds on the belief that the row fits.
+ *
+ * `justify-content: flex-end` keeps a wrapped second row aligned under the first
+ * rather than drifting left. */
 .top-bar__controls {
   display: flex;
   flex-wrap: wrap;
@@ -224,6 +244,22 @@
   font-weight: 800;
 }
 
+/* A knocked-out player's row is dimmed.
+ *
+ * ⚠ THIS IS A KNOWN, MEASURED CONTRAST FAILURE, PRE-EXISTING SINCE v1.0, AND
+ * DELIBERATELY STILL HERE. `opacity` composites the row's text against the page
+ * behind it, so an eliminated player's ordinary --ink text lands at 3.76:1
+ * (Felt) / 3.64:1 (Arcade) against the 4.5:1 the project holds itself to. Roger
+ * ranked the fix down on 2026-09-03 — the elimination threshold is an optional
+ * setting most games never use — and it is tracked in PROJECT.md's follow-up
+ * list, not fixed here.
+ *
+ * WHAT IS WORTH KNOWING BEFORE ANYBODY TRIES TO FIX IT WITH A COLOUR: at 0.55 no
+ * colour can clear 4.5:1 here. The theoretical ceiling, with pure white text on
+ * Felt and pure black on Arcade — neither of which this palette allows — is
+ * 4.27:1 and 4.66:1. Only changing how the row dims can fix it. That is why the
+ * one thing this rule must not do is pull NEW small coloured text in with it;
+ * see the note on the Yaniv! column in EndGameScreen.css. */
 .standings-table tr[data-eliminated='true'] {
   opacity: 0.55;
 }

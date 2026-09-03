@@ -105,6 +105,40 @@
   color: var(--outcome-assaf-text-soft);
 }
 
+/* A KNOCKED-OUT PLAYER'S ROW GETS THE WORDS WITHOUT THE COLOUR, and this is the
+ * one place in this change where a measurement decided the design.
+ *
+ * The row is dimmed with `opacity: 0.55` (app.css), which composites everything
+ * in it against the page behind. Measured for this column's two 11px words:
+ *
+ *                        live row        eliminated row (0.55)
+ *   "n Yaniv"   Felt       7.17:1              3.38:1
+ *               Arcade     5.06:1              2.28:1
+ *   "n Assaf"   Felt       6.45:1              3.03:1
+ *               Arcade     5.12:1              2.41:1
+ *
+ * All four dimmed figures are far under the 4.5:1 floor, and in an elimination
+ * game the players who went out are disproportionately the ones with Assaf calls
+ * against them — so that is the common case, not the corner. NO COLOUR FIXES IT:
+ * the ceiling under 0.55 is 4.27:1 (Felt) / 4.66:1 (Arcade) with text this
+ * palette does not even allow, and a descendant cannot escape an ancestor's
+ * opacity group.
+ *
+ * So the words drop to the row's own inherited ink here. They then read at
+ * exactly the row's pre-existing 3.76 / 3.64 — the same figure as the player's
+ * name and score beside them, which is a known deferred defect (see app.css) —
+ * instead of adding two NEW, worse failures of their own. Nothing is lost that
+ * carries meaning: each part has always been the outcome WORD as well as the
+ * colour, and the word is what a colour-blind player, a screen reader, and now
+ * an eliminated row all read.
+ *
+ * When the row's dimming is eventually fixed properly, delete this rule: the
+ * colours above will be correct again on their own. */
+.standings-table tr[data-eliminated='true'] .end__yaniv-part--yaniv,
+.standings-table tr[data-eliminated='true'] .end__yaniv-part--assaf {
+  color: inherit;
+}
+
 .end__stat {
   font-size: 0.95rem;
   color: var(--ink-muted);
