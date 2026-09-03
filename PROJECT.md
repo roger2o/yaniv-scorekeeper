@@ -43,6 +43,8 @@ Two features Roger asked for, and two smaller additions he approved while the wo
 
 - **Remove player mid-game** — allow a player to be removed from the game while it is in progress.
 
+- **Keep screen on toggle** — a setting to keep the phone screen awake at all times while the app is open. Should be a toggle: on by default (screen stays on), or off to allow the phone to sleep normally and save battery.
+
 ## Scoring Engine (the core logic)
 
 For a round where the caller's hand value is `C` and the lowest *other* player's hand value is `L`:
