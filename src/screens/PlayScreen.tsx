@@ -12,8 +12,10 @@
  * Tapping New Round opens the ENTRY VIEW (RoundEntry). Standings never reorder
  * by score. An "add player" affordance joins a latecomer mid-game. Undo reverts
  * the last round. If an edit/undo makes the engine reject the game (e.g. a
- * recorded join no longer has a round to land in), we show a plain message and
- * offer undo instead of a blank screen.
+ * recorded join no longer has a round to land in), we show a plain message
+ * instead of a blank screen. That frame ALWAYS offers at least one control that
+ * works — "Start a new game" is unconditional — and never renders one that
+ * would refuse in silence, so it can never become a dead end.
  *
  * "End game" is UNRECOVERABLE (undo covers only the most recent round), so it
  * goes through a confirmation step first — see ConfirmDialog. With that fail-safe in
@@ -51,7 +53,7 @@ import { seatColorVar, seatShape } from './seat';
 import './PlayScreen.css';
 
 export function PlayScreen() {
-  const { game, state, engineError, undoLastRound, endGame, addPlayer, removePlayer } =
+  const { game, state, engineError, undoLastRound, endGame, addPlayer, removePlayer, resetGame } =
     useStore();
 
   const [entering, setEntering] = useState(false);
@@ -88,41 +90,31 @@ export function PlayScreen() {
     const joiners = players.filter((p) => (p.joinsBeforeRoundIndex ?? 0) > 0);
     const stranded = joiners.length > 0 ? joiners[joiners.length - 1]! : null;
     const isJoinError = engineError?.toLowerCase().includes('join') ?? false;
-    // A DEPARTURE marker can dangle the same way, in the one case the undo
-    // write-clamp refuses to move it (clamping would take it to or below the
-    // player's join point) and in a hand-edited save. Same recovery: one tap to
-    // take that player out of the game.
-    const departed =
-      players.find(
-        (p) =>
-          p.leavesBeforeRoundIndex !== undefined &&
-          p.leavesBeforeRoundIndex > state.history.length,
-      ) ?? null;
-    const isLeaveError =
-      engineError?.toLowerCase().includes('leaves before round') ?? false;
+    // Removing a stranded joiner can never be refused by the reducer's guard:
+    // they are removable precisely because they appear in no recorded round,
+    // and taking a JOINER out cannot reduce the count of players present from
+    // round 0. So this button always does what it says.
+    const canRemoveStranded = stranded !== null && isJoinError;
+    const canUndo = state.history.length > 0;
 
     return (
       <div className="app-frame">
         <div className="banner banner--danger" role="alert">
-          {departed && isLeaveError
-            ? `That change goes back to before ${departed.name} left the game. Remove ${departed.name}, or undo the change.`
-            : stranded && isJoinError
-              ? `That change ends the game before ${stranded.name} joined. Remove ${stranded.name}, or undo the change.`
-              : engineError
-                ? `That change can’t be applied: ${engineError} Undo it to continue.`
-                : 'The game state is invalid. Undo the last change to continue.'}
+          {canRemoveStranded
+            ? `That change ends the game before ${stranded.name} joined. Remove ${stranded.name}, or undo the change.`
+            : engineError
+              ? `That change can’t be applied: ${engineError} Start a new game to continue.`
+              : 'The game state is invalid. Start a new game to continue.'}
         </div>
+        {/* EVERY control in this frame must actually do something. A button that
+            refuses in silence is the same fault as a dead end, just quieter — so
+            the two conditional ones are only rendered when they will work, and
+            "Start a new game" is always here as the guaranteed way out. It has
+            no confirmation, deliberately and for the same reason the end screen's
+            broken-state escape has none: gating the only exit from a broken game
+            behind a question is actively unhelpful. */}
         <div className="play__actions">
-          {departed && isLeaveError && (
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={() => removePlayer(departed.id)}
-            >
-              Remove {departed.name}
-            </button>
-          )}
-          {!(departed && isLeaveError) && stranded && isJoinError && (
+          {canRemoveStranded && (
             <button
               type="button"
               className="btn btn--primary"
@@ -131,12 +123,17 @@ export function PlayScreen() {
               Remove {stranded.name}
             </button>
           )}
-          <button
-            type="button"
-            className="btn btn--secondary"
-            onClick={undoLastRound}
-          >
-            Undo last round
+          {canUndo && (
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={undoLastRound}
+            >
+              Undo last round
+            </button>
+          )}
+          <button type="button" className="btn btn--ghost" onClick={resetGame}>
+            Start a new game
           </button>
         </div>
       </div>

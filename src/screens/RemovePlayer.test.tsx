@@ -16,7 +16,7 @@
  */
 
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { StoreProvider, useStore, STORAGE_KEY, SCHEMA_VERSION } from '../state';
 import { ThemeProvider } from '../theme';
@@ -48,13 +48,17 @@ function Harness({
   history?: RoundEntry[];
 }) {
   const { startGame, addRound, state, game } = useStore();
+  // Seeded ONCE. A test that resets the game must land on a genuinely empty
+  // state, not have this effect rebuild the fixture underneath it.
+  const seeded = useRef(false);
   useEffect(() => {
-    if (state.settings === null) {
+    if (!seeded.current) {
+      seeded.current = true;
       startGame(settings);
       for (const r of history) addRound(r);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.settings]);
+  }, []);
   if (state.settings === null) return null;
   return (
     <>
@@ -78,6 +82,20 @@ function Harness({
       <span data-testid="stored-ring-order">{(state.ringOrder ?? []).join(',')}</span>
       <span data-testid="starts-next">{game?.startsNextId ?? ''}</span>
       <span data-testid="game-over">{String(game?.gameOver ?? false)}</span>
+      {/* Records a round without walking the three-step entry flow, which has
+          its own suite. This test file is about what the STATE does. */}
+      <button
+        type="button"
+        data-testid="probe-add-round"
+        onClick={() =>
+          addRound({
+            callerId: game!.activePlayerIds[0]!,
+            hands: Object.fromEntries(game!.activePlayerIds.map((id) => [id, 0])),
+          })
+        }
+      >
+        probe
+      </button>
       {/* The shell's own routing rule: an engine auto-end always wins. */}
       {state.screen === 'end' || game?.gameOver === true ? (
         <EndGameScreen />
@@ -462,36 +480,100 @@ describe('a departure is announced, and never leaves the game unusable', () => {
     );
   });
 
-  it('#12 offers a one-tap fix when an undo leaves the marker dangling', () => {
-    // Dee joins before round 2 and leaves before round 4, so she played rounds
-    // 2 and 3. Unwinding to two rounds cannot clamp her departure without
-    // making her leave as she joined, so the marker is deliberately left
-    // dangling and the play screen's recovery banner takes over.
-    const settings = table(['Ann', 'Bo', 'Cy']);
-    settings.players.push({
-      id: 'd',
-      name: 'Dee',
-      seat: 3,
-      joinsBeforeRoundIndex: 2,
-      leavesBeforeRoundIndex: 4,
+  it('THE BRICK REPRO: two ordinary undos never trap the scorekeeper', () => {
+    // Holmes's exact sequence, 2026-09-03. Every step is a normal thing to do.
+    // Two players, a round, a mid-game join, another round, one player leaves,
+    // then undo twice. Before the fix the app arrived at a screen whose only
+    // three buttons all did nothing, and the dead state was saved, so
+    // relaunching the installed app came straight back to it.
+    const settings = table(['Ann', 'Bo']);
+    renderGame(settings, [{ callerId: 'a', hands: { a: 3, b: 8 } }]);
+
+    // Cy joins mid-game, then another round is played.
+    fireEvent.click(screen.getByRole('button', { name: 'Add player' }));
+    fireEvent.change(screen.getByLabelText('New player name'), {
+      target: { value: 'Cy' },
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+    expect(ringIds()).toHaveLength(3);
+    const cyId = screen.getByTestId('markers').textContent!.split('|')[2]!.split(':')[0]!;
+    fireEvent.click(screen.getByTestId('probe-add-round'));
+    expect(screen.getByTestId('history-len').textContent).toBe('2');
+
+    // Ann leaves.
+    openRearrange();
+    removeThroughUi('a');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByTestId('markers').textContent).toContain('a:2');
+
+    // Undo twice, all the way back to an empty scoresheet.
+    fireEvent.click(screen.getByRole('button', { name: 'Undo round' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo round' }));
+    expect(screen.getByTestId('history-len').textContent).toBe('0');
+
+    // Ann's departure could not be represented with nothing recorded, so it
+    // went rather than being left dangling.
+    expect(screen.getByTestId('markers').textContent).toContain('a:-');
+
+    // Cy's JOIN marker is still stranded, which is the pre-existing and fully
+    // recoverable case: the banner names Cy and that button genuinely works.
+    // The brick was that NO button worked; now one does, in one tap.
+    expect(screen.getByRole('alert').textContent).toContain('before Cy joined');
+    const buttons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.play__actions button'),
+    );
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      `Remove Cy`,
+      'Start a new game',
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Cy' }));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(ringIds()).toEqual(['a', 'b']);
+    void cyId;
+  });
+
+  it('always offers a control that works when the engine does reject the game', () => {
+    // The belt, independent of any particular cause: a stranded mid-game
+    // joiner. Every button rendered in this frame must do something, and there
+    // must always be at least one.
+    const settings = table(['Ann', 'Bo', 'Cy']);
+    settings.players.push({ id: 'd', name: 'Dee', seat: 3, joinsBeforeRoundIndex: 2 });
     renderGame(settings, [
       { callerId: 'a', hands: { a: 3, b: 8, c: 12 } },
       { callerId: 'a', hands: { a: 3, b: 8, c: 12 } },
-      { callerId: 'a', hands: { a: 3, b: 8, c: 12, d: 6 } },
-      { callerId: 'a', hands: { a: 3, b: 8, c: 12, d: 6 } },
     ]);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Undo round' })); // marker 4 -> 3
-    expect(screen.getByTestId('markers').textContent).toContain('d:3');
-    fireEvent.click(screen.getByRole('button', { name: 'Undo round' })); // refuses to clamp
+    fireEvent.click(screen.getByRole('button', { name: 'Undo round' }));
 
     const banner = screen.getByRole('alert');
-    expect(banner.textContent).toContain('before Dee left the game');
+    expect(banner.textContent).toContain('before Dee joined');
+    const buttons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.play__actions button'),
+    );
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      'Remove Dee',
+      'Undo last round',
+      'Start a new game',
+    ]);
+    // Removing the stranded joiner works, which is the documented recovery.
     fireEvent.click(screen.getByRole('button', { name: 'Remove Dee' }));
-    // Back to a working game, no white screen anywhere along the way.
-    expect(screen.getByTestId('markers').textContent).toBe('a:-|b:-|c:-');
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(ringIds()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('offers no button it cannot honour, and still has a way out', () => {
+    // With history empty there is nothing to undo, so that button is not shown
+    // rather than shown and refusing. "Start a new game" is always there.
+    const settings = table(['Ann', 'Bo', 'Cy']);
+    settings.players[1]!.leavesBeforeRoundIndex = 3;
+    renderGame(settings, []);
+    expect(screen.getByRole('alert')).toBeTruthy();
+    const buttons = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.play__actions button'),
+    );
+    expect(buttons.map((b) => b.textContent)).toEqual(['Start a new game']);
+    fireEvent.click(buttons[0]!);
+    // Back to a clean slate: the broken game is gone, not still on screen.
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 

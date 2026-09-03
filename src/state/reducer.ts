@@ -204,21 +204,38 @@ export function reducer(state: AppState, action: Action): AppState {
       // departure now sits at the earlier point, so those replayed rounds are
       // entered without that player. That is the price of never un-departing
       // someone, and it is the right price.
+      //
+      // AND WHEN THE MARKER CANNOT MOVE, IT GOES. Clamping to or below the
+      // player's join point would break the engine's "cannot leave before
+      // joining" rule, so the marker is dropped instead of being left dangling.
+      // That is not a hole in "never un-depart someone": this case arises only
+      // when NONE of the remaining rounds is one that player played (the rounds
+      // they played are the indices from their join point up to their departure,
+      // and here history has been cut back to at or below their join point). So
+      // there is no departure from a game they took part in left to erase, and
+      // no legal marker that could describe them either.
+      //
+      // The alternative — leaving it dangling for the play screen's recovery
+      // banner — was tried first and could BRICK THE APP. With exactly two
+      // players present from round 0 and history unwound to empty, the offered
+      // "remove that player" is refused by the guard on REMOVE_PLAYER above
+      // (it would leave one round-0 player), "undo" has nothing left to undo,
+      // and the invalid state is persisted, so relaunching the installed app
+      // returns to the same dead screen. Found by Holmes, 2026-09-03.
       if (state.settings !== null) {
-        let clamped = false;
+        let changed = false;
         const players = state.settings.players.map((p) => {
           const marker = p.leavesBeforeRoundIndex;
           if (marker === undefined || marker <= history.length) return p;
-          // Clamping to or below the join index would break the engine's
-          // "cannot leave before joining" rule. Leave it dangling instead: the
-          // game is then engine-invalid and the play screen's recovery banner
-          // offers to remove that player, which is a loud, fixable state rather
-          // than a quiet wrong one.
-          if (history.length <= (p.joinsBeforeRoundIndex ?? 0)) return p;
-          clamped = true;
+          changed = true;
+          if (history.length <= (p.joinsBeforeRoundIndex ?? 0)) {
+            const cleared = { ...p };
+            delete cleared.leavesBeforeRoundIndex;
+            return cleared;
+          }
           return { ...p, leavesBeforeRoundIndex: history.length };
         });
-        if (clamped) next.settings = { ...state.settings, players };
+        if (changed) next.settings = { ...state.settings, players };
       }
       return next;
     }

@@ -457,6 +457,7 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     // block is its only writer and is knockout-gated), with no departure
     // nothing enters `left`, and validation requires two players from round 0
     // while `joined` only grows, so the active count never falls below two.
+    // (Zero remaining is handled after the loop, not here — see the note there.)
     const remaining = activeIds();
     if (remaining.length === 1) {
       gameOver = true;
@@ -507,10 +508,17 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
 
   // --- Winner / game-over resolution ---
   // Purely "one active player remains", independent of `knockoutScore` — see
-  // the mid-loop note above for why widening this is safe. The zero-active case
-  // is defensive only (unreachable through the app, since the game is already
-  // over at one) and ends the game with NO winner rather than crowning nobody's
-  // total or throwing.
+  // the mid-loop note above for why widening this is safe.
+  //
+  // ZERO ACTIVE IS REACHABLE AND HANDLED HERE ON PURPOSE. Do not delete this
+  // branch as dead code. An ordinary knockout game reaches it: two players,
+  // elimination score 100, both in the nineties, one calls "Yaniv!" and is
+  // caught — the caller takes +30 and the catcher takes their hand, so both
+  // cross 100 in the SAME round and the table empties. Before this feature the
+  // game simply carried on with nobody in it; now it ends with NO winner, which
+  // is the honest answer. (Found by Holmes, 2026-09-03: the branch was written
+  // as a defensive guard against a hand-edited save and turned out to fix a
+  // real fault in games where nobody leaves at all.)
   const remaining = activeIds();
   const remainingSet = new Set(remaining);
   let winnerId: string | null = null;

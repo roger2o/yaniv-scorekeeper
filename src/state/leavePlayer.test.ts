@@ -221,11 +221,12 @@ describe('#16 undo — a departure is never un-departed by rewinding history', (
     expect(game.standings.find((r) => r.playerId === 'b')!.left).toBe(true);
   });
 
-  it('leaves the marker alone when clamping would break the join rule', () => {
+  it('DROPS a marker that cannot move, rather than leaving the game invalid', () => {
     // A mid-game joiner who later left. Unwinding to their join point cannot
     // clamp the departure without making them "leave as they joined", so the
-    // marker is left dangling: a loud, one-tap-fixable state (the play screen's
-    // recovery banner) rather than a quiet wrong one.
+    // marker goes instead. That erases no real departure: the only rounds they
+    // played were the ones from their join point onward, and history has been
+    // cut back to at or below it, so none of those rounds is left.
     let s = started([R0, R1]);
     s = reducer(s, {
       type: 'ADD_PLAYER',
@@ -242,12 +243,40 @@ describe('#16 undo — a departure is never un-departed by rewinding history', (
 
     s = reducer(s, { type: 'UNDO_LAST_ROUND' }); // 4 -> 3, still above the join
     expect(playerOf(s, 'd').leavesBeforeRoundIndex).toBe(3);
-    s = reducer(s, { type: 'UNDO_LAST_ROUND' }); // would be 2, at/below join 2
-    expect(playerOf(s, 'd').leavesBeforeRoundIndex).toBe(3);
-    expect(() => recompute(s.history, s.settings!)).toThrow();
-    // And the recovery is the existing one.
-    const fixed = reducer(s, { type: 'REMOVE_PLAYER', playerId: 'd' });
-    expect(() => recompute(fixed.history, fixed.settings!)).not.toThrow();
+    s = reducer(s, { type: 'UNDO_LAST_ROUND' }); // cannot reach 2, so it goes
+    expect(playerOf(s, 'd').leavesBeforeRoundIndex).toBeUndefined();
+    // The key property: the undo left a game the engine still accepts.
+    expect(() => recompute(s.history, s.settings!)).not.toThrow();
+    expect(recompute(s.history, s.settings!).activePlayerIds).toContain('d');
+  });
+
+  it('never produces an engine-invalid game, however far back it is unwound', () => {
+    // The regression guard on the fault that could brick the app: two players
+    // present from round 0, a joiner, and a departure — unwound all the way to
+    // an empty history. Every step must leave a game the engine accepts, or a
+    // recovery banner with no working way out.
+    let s = started([R0]);
+    s = reducer(s, {
+      type: 'ADD_PLAYER',
+      player: { id: 'd', name: 'Dee', seat: 3, joinsBeforeRoundIndex: 1 },
+    });
+    s = reducer(s, {
+      type: 'ADD_ROUND',
+      round: { callerId: 'a', hands: { a: 3, b: 9, c: 8, d: 7 } },
+    });
+    s = reducer(s, { type: 'LEAVE_PLAYER', playerId: 'a' });
+    while (s.history.length > 0) {
+      s = reducer(s, { type: 'UNDO_LAST_ROUND' });
+      // The joiner's own marker can still make the game invalid — that is the
+      // documented, one-tap-recoverable case — but no DEPARTURE marker is ever
+      // left dangling.
+      for (const p of s.settings!.players) {
+        if (p.leavesBeforeRoundIndex !== undefined) {
+          expect(p.leavesBeforeRoundIndex).toBeLessThanOrEqual(s.history.length);
+          expect(p.leavesBeforeRoundIndex).toBeGreaterThan(p.joinsBeforeRoundIndex ?? 0);
+        }
+      }
+    }
   });
 
   it('does not touch a marker that history has not undercut', () => {
