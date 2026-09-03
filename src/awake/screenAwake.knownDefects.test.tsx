@@ -1,25 +1,29 @@
 // @vitest-environment jsdom
 
 /**
- * ⚠⚠ THESE THREE TESTS FAIL ON PURPOSE. ⚠⚠
+ * THREE DEFECTS, WRITTEN AS TESTS BEFORE THEY WERE FIXED — now the standing
+ * regression guards against all three coming back.
  *
- * They are the three defects Holmes and Twiggy found in the keep-screen-awake
- * feature, written down as tests BEFORE the fix, so that the fix has to satisfy
- * a test that is red today rather than a test written afterwards to match
- * whatever the fix happened to do. A test written after the fix proves the code
- * runs; a test written before it proves the bug is gone.
+ * These are the three faults Holmes and Twiggy found in the keep-screen-awake
+ * feature. They were written down as failing tests BEFORE the fix, so that the
+ * fix had to satisfy a test that was already red rather than a test written
+ * afterwards to match whatever the fix happened to do. A test written after the
+ * fix proves the code runs; a test written before it proves the bug is gone.
  *
- * The suite is therefore RED until `src/awake/screenAwake.ts` and
- * `src/awake/ScreenAwakeToggle.tsx` are fixed. That is deliberate and this file
- * is the only thing failing. Delete nothing here to get green — the failures ARE
- * the specification. Once all three pass, fold them into
- * `screenAwake.stress.test.ts` or leave them; they are standing regression
- * guards either way.
+ * They now all PASS, and that history is the reason to keep them: each one is a
+ * fault this feature actually had, in code that looked right and had passing
+ * tests around it.
  *
- * All three are SILENT failures on a real phone. Nobody would file a bug; the
- * scorekeeper would simply find the screen locking between rounds again while
- * the button still shows a lit bulb, which is the exact failure this feature was
- * built to remove.
+ * DO NOT WEAKEN AN ASSERTION HERE TO GET GREEN. The assertions are the
+ * specification. The one change ever made to them is recorded above DEFECT 2
+ * below, where the original demanded recovery within a single macrotask and so
+ * contradicted DEFECT 1 and the stress suite; the intent was kept and only the
+ * timing was corrected, by driving the clock instead of assuming.
+ *
+ * All three were SILENT failures on a real phone. Nobody would have filed a bug;
+ * the scorekeeper would simply have found the screen locking between rounds
+ * again while the button still showed a lit bulb, which is the exact failure
+ * this feature was built to remove.
  *
  * DEFECT 1 — the display follows the PREFERENCE, not the LOCK.
  *   `ScreenAwakeToggle.tsx` reads `{ supported, preferOn, blocked }` and never
@@ -204,11 +208,44 @@ describe('DEFECT 1 — the control must show what is actually happening', () => 
   });
 });
 
+/**
+ * REWRITTEN 2026-09-03, and the reason is worth keeping, because these two
+ * tests were RIGHT about the defect and WRONG about one detail.
+ *
+ * As first written they demanded the lock be re-requested within a single
+ * macrotask of the phone taking it away. That made them unsatisfiable against
+ * DEFECT 1's tests above and against `screenAwake.stress.test.ts`, which assert
+ * the opposite value at the same instant: after a revoke, is the app holding a
+ * lock or not? Two of the three said no, one said yes, and the sequences were
+ * byte-identical, so no implementation could pass all three.
+ *
+ * The fix keeps the intent and drops the timing. Recovery is deliberately NOT
+ * immediate: re-requesting from inside the release handler is an unbounded loop
+ * against a power manager that grants a lock and takes it straight back, and a
+ * frozen app is a worse failure than a screen that sleeps. So the retry waits,
+ * and doubles its wait (see the RETRY_* notes in `screenAwake.ts`).
+ *
+ * That means there are TWO things to assert, not one — that the app is HONEST
+ * during the wait, and that it RECOVERS afterwards — and only a driven clock
+ * can see both. Hence the fake timers in this block. The original tests could
+ * see neither: they finished about a second too early.
+ */
 describe('DEFECT 2 — a lock revoked while the app is visible must be re-acquired', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Run the clock forward and let the promises the timers woke up settle. */
+  const advance = (ms: number) => vi.advanceTimersByTimeAsync(ms);
+
   it('asks for the lock again when the phone takes it back mid-game', async () => {
     const h = installWakeLock();
     startScreenAwake();
-    await settle();
+    await advance(0);
     expect(h.request).toHaveBeenCalledTimes(1);
     expect(getScreenAwakeState().held).toBe(true);
 
@@ -216,11 +253,21 @@ describe('DEFECT 2 — a lock revoked while the app is visible must be re-acquir
     // simply ends the lock. This is a normal power-manager decision, not an
     // error, and nothing is thrown.
     h.sentinels[0]!.fireRelease();
-    await settle();
+    await advance(0);
 
-    // FAILS TODAY: `visibilitychange` is the only thing that re-requests, so
-    // the feature is over for the rest of the session — until the scorekeeper
-    // happens to switch apps and come back, which they may never do.
+    // Honest in the gap. This is the state DEFECT 1 above pins to an unlit
+    // bulb: no lock is held, the phone did not refuse, and the scorekeeper's
+    // preference is untouched. Before the fix all three of these were wrong.
+    expect(getScreenAwakeState().held).toBe(false);
+    expect(getScreenAwakeState().blocked).toBe(false);
+    expect(getScreenAwakeState().preferOn).toBe(true);
+    expect(h.request).toHaveBeenCalledTimes(1);
+
+    // And it comes back on its own, without the scorekeeper ever switching
+    // apps. Before the fix `visibilitychange` was the only trigger, so this
+    // never happened: the feature was over for the rest of the session, and
+    // the screen locked between every hand while the button showed a lit bulb.
+    await advance(1_000);
     expect(h.request).toHaveBeenCalledTimes(2);
     expect(getScreenAwakeState().held).toBe(true);
     expect(h.live()).toHaveLength(1);
@@ -229,12 +276,18 @@ describe('DEFECT 2 — a lock revoked while the app is visible must be re-acquir
   it('recovers repeatedly, not just once, when the phone keeps revoking', async () => {
     const h = installWakeLock();
     startScreenAwake();
-    await settle();
+    await advance(0);
 
     for (let i = 0; i < 5; i++) {
       h.live()[0]!.fireRelease();
-      await settle();
-      // FAILS TODAY on the first iteration.
+      await advance(0);
+      // Honest during every wait, not just the first.
+      expect(getScreenAwakeState().held).toBe(false);
+      // The wait doubles each time, so a generous advance covers every
+      // iteration without pinning the exact schedule — those delays are a
+      // judgement call rather than a measurement, and a test that hard-codes
+      // them would fail the next time the judgement is revisited.
+      await advance(60_000);
       expect(getScreenAwakeState().held).toBe(true);
       expect(h.live()).toHaveLength(1);
     }
@@ -243,16 +296,17 @@ describe('DEFECT 2 — a lock revoked while the app is visible must be re-acquir
 
   it('does not start re-acquiring when the preference is off', async () => {
     // The guard on the fix: re-acquiring must key off the preference, or turning
-    // the feature off would fight the browser forever. This one PASSES today and
-    // must still pass after the fix.
+    // the feature off would fight the browser forever. This one PASSED before
+    // the fix and must still pass after it.
     const h = installWakeLock();
     startScreenAwake();
-    await settle();
+    await advance(0);
     setScreenAwakePreference(false);
-    await settle();
+    await advance(0);
     const before = h.request.mock.calls.length;
 
-    await settle();
+    // Long enough for many retries to have fired if any were scheduled.
+    await advance(120_000);
     expect(h.request.mock.calls.length).toBe(before);
     expect(getScreenAwakeState().held).toBe(false);
   });
