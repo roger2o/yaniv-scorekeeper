@@ -561,6 +561,11 @@ describe('keep-screen-awake — a lock that refuses to be given up', () => {
 
       expect(watch.seen).toEqual([]);
       expect(getScreenAwakeState().held).toBe(false);
+      // And it must not be reported as the phone REFUSING anything. The user
+      // turned the feature off; a failure to hand back a hold they no longer
+      // want is not something to warn them about, and warning them would say
+      // the phone blocked something it did not.
+      expect(getScreenAwakeState().blocked).toBe(false);
     } finally {
       watch.stop();
     }
