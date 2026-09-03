@@ -28,13 +28,34 @@ export type Action =
    */
   | { type: 'ADD_PLAYER'; player: Player }
   /**
-   * Remove a player by id. Used to RECOVER from an edit/undo that strands a
+   * HARD-DELETE a player by id — take them out of `settings.players` entirely
+   * and re-pack seats.
+   *
+   * Two callers, one condition. It RECOVERS from an edit/undo that strands a
    * mid-game joiner (the engine then rejects the game): removing the stranded
-   * latecomer makes the game legal again. Only meaningful for a mid-game joiner;
-   * removing an original player is guarded against (would break seat contiguity
-   * and history). No-op if it would drop below the seat-0/1 originals.
+   * latecomer makes it legal again. It is also the path a mid-game removal
+   * takes for a player who has played no recorded round, since no departure
+   * marker can legally describe them (see engine/removal.ts).
+   *
+   * Guarded to exactly that case: a player who appears in a recorded round is
+   * NOT removable this way — deleting them would orphan their hand totals in
+   * history. They get a departure marker instead (LEAVE_PLAYER). Also a no-op
+   * if it would leave the game below two players, or below two present from
+   * round 0.
    */
   | { type: 'REMOVE_PLAYER'; playerId: string }
+  /**
+   * MID-GAME DEPARTURE: mark a player as having left. Their seat, their
+   * scoresheet column and their history entries all stay; only the marker is
+   * added, and the engine derives the rest. The reducer sets the marker to the
+   * CURRENT history length — "absent from the next round to be played onward" —
+   * so it can never be stale.
+   *
+   * Not undoable, by design: it takes three deliberate acts to get here, and a
+   * departure must never be reversed by rewinding history (see the write clamp
+   * in UNDO_LAST_ROUND).
+   */
+  | { type: 'LEAVE_PLAYER'; playerId: string }
   /** Append a round to history (engine then re-derives everything). */
   | { type: 'ADD_ROUND'; round: RoundEntry }
   /** Drop the most recent round (undo). No-op if history is empty. */
@@ -96,14 +117,22 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'REMOVE_PLAYER': {
       if (state.settings === null) return state;
       const target = state.settings.players.find((p) => p.id === action.playerId);
-      // Only a mid-game joiner may be removed (original players, join index 0,
-      // are part of the seat circle from the start and can't be pulled out).
-      if (target === undefined || (target.joinsBeforeRoundIndex ?? 0) === 0) return state;
+      if (target === undefined) return state;
+      // Only a player who appears in NO recorded round may be hard-deleted —
+      // that is exactly `joinIndex >= history.length`. Anyone who has played a
+      // round owns hand totals inside history, and deleting them would orphan
+      // those; they get a departure marker instead.
+      if ((target.joinsBeforeRoundIndex ?? 0) < state.history.length) return state;
       const remaining = state.settings.players
         .filter((p) => p.id !== action.playerId)
         // Re-pack seats so they stay contiguous {0..n-1} after the removal.
         .sort((a, b) => a.seat - b.seat)
         .map((p, i) => ({ ...p, seat: i }));
+      // Never leave a game the engine would reject on player count.
+      if (remaining.length < 2) return state;
+      if (remaining.filter((p) => (p.joinsBeforeRoundIndex ?? 0) === 0).length < 2) {
+        return state;
+      }
       const next: AppState = {
         ...state,
         settings: { ...state.settings, players: remaining },
@@ -111,6 +140,30 @@ export function reducer(state: AppState, action: Action): AppState {
       // Keep the circle-view arrangement from carrying a player who has left.
       // (Render-time reconciliation would also drop them; this just stops a
       // stale id being persisted.)
+      if (state.ringOrder !== undefined) {
+        next.ringOrder = state.ringOrder.filter((id) => id !== action.playerId);
+      }
+      return next;
+    }
+
+    case 'LEAVE_PLAYER': {
+      if (state.settings === null) return state;
+      const target = state.settings.players.find((p) => p.id === action.playerId);
+      if (target === undefined) return state;
+      // Already marked: leave the original marker alone, or a second tap would
+      // silently move a recorded departure later in the game.
+      if (target.leavesBeforeRoundIndex !== undefined) return state;
+      const players = state.settings.players.map((p) =>
+        p.id === action.playerId
+          ? { ...p, leavesBeforeRoundIndex: state.history.length }
+          : p,
+      );
+      const next: AppState = {
+        ...state,
+        settings: { ...state.settings, players },
+      };
+      // A departed player's chip leaves the circle, so drop them from any saved
+      // arrangement rather than persisting an id the ring will never draw.
       if (state.ringOrder !== undefined) {
         next.ringOrder = state.ringOrder.filter((id) => id !== action.playerId);
       }
@@ -125,13 +178,50 @@ export function reducer(state: AppState, action: Action): AppState {
         history: [...state.history, action.round],
       };
 
-    case 'UNDO_LAST_ROUND':
+    case 'UNDO_LAST_ROUND': {
       if (state.history.length === 0) return state;
       // Most-recent-only: drop just the last entry.
-      return {
-        ...state,
-        history: state.history.slice(0, -1),
-      };
+      const history = state.history.slice(0, -1);
+      const next: AppState = { ...state, history };
+
+      // WRITE CLAMP for departure markers, and it has to be on WRITE rather
+      // than on read. A departure is pinned to a round index, so undoing below
+      // it leaves the marker dangling — and a departure must never be undone by
+      // rewinding history. Clamping at READ time (an effective index of
+      // min(marker, history.length)) looks equivalent and is not: it RE-EXPANDS
+      // when history grows again. Marker 5, five rounds, undo to four, the
+      // scorekeeper correctly re-enters round 4 without the departed player,
+      // history is five again, the marker snaps back to 5, the player becomes
+      // active for a round that holds no hand total for them, and the engine
+      // throws — the whole game to the "cannot be recalculated" banner, on the
+      // commonest correction path in the app. Moving the marker itself cannot
+      // re-expand.
+      //
+      // Every round still in history is one the player actually played, so
+      // their hand is present and required in all of them.
+      //
+      // Accepted trade-off: unwind several rounds and replay them, and the
+      // departure now sits at the earlier point, so those replayed rounds are
+      // entered without that player. That is the price of never un-departing
+      // someone, and it is the right price.
+      if (state.settings !== null) {
+        let clamped = false;
+        const players = state.settings.players.map((p) => {
+          const marker = p.leavesBeforeRoundIndex;
+          if (marker === undefined || marker <= history.length) return p;
+          // Clamping to or below the join index would break the engine's
+          // "cannot leave before joining" rule. Leave it dangling instead: the
+          // game is then engine-invalid and the play screen's recovery banner
+          // offers to remove that player, which is a loud, fixable state rather
+          // than a quiet wrong one.
+          if (history.length <= (p.joinsBeforeRoundIndex ?? 0)) return p;
+          clamped = true;
+          return { ...p, leavesBeforeRoundIndex: history.length };
+        });
+        if (clamped) next.settings = { ...state.settings, players };
+      }
+      return next;
+    }
 
     case 'EDIT_LAST_ROUND':
       if (state.history.length === 0) return state;

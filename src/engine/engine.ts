@@ -17,6 +17,7 @@ import {
   type GameState,
   type HalvingEvent,
   type JoinEvent,
+  type LeaveEvent,
   type Player,
   type ResolvedRound,
   type RoundEntry,
@@ -71,6 +72,32 @@ function validateSettings(settings: GameSettings, historyLength: number): void {
       if (k > historyLength) {
         throw new EngineInputError(
           `Player "${p.id}" joins before round ${k}, but only ${historyLength} round(s) exist; cannot join after the game's recorded history.`,
+        );
+      }
+    }
+    // [MID-GAME DEPARTURE] The leave marker, when present, must be a
+    // non-negative integer, cannot point past recorded history (same reason as
+    // the join marker — it could never take effect on replay, so it can only be
+    // corruption), and must be strictly AFTER the player's join point. Leaving
+    // before or in the same breath as joining would leave a standings row for
+    // someone who never played a round; such a player is removed from
+    // `players` outright instead of being marked.
+    if (p.leavesBeforeRoundIndex !== undefined) {
+      const k = p.leavesBeforeRoundIndex;
+      if (typeof k !== 'number' || !Number.isInteger(k) || k < 0) {
+        throw new EngineInputError(
+          `leavesBeforeRoundIndex for player "${p.id}" must be a non-negative integer, got: ${String(k)}`,
+        );
+      }
+      if (k > historyLength) {
+        throw new EngineInputError(
+          `Player "${p.id}" leaves before round ${k}, but only ${historyLength} round(s) exist; cannot leave after the game's recorded history.`,
+        );
+      }
+      const joinIndex = p.joinsBeforeRoundIndex ?? 0;
+      if (k <= joinIndex) {
+        throw new EngineInputError(
+          `Player "${p.id}" leaves before round ${k} but joins before round ${joinIndex}; a player cannot leave before or as they join.`,
         );
       }
     }
@@ -172,9 +199,15 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
   const seatOrder = bySeat(settings.players);
   const nameOfId = new Map<string, string>();
   const joinIndexOfId = new Map<string, number>();
+  // Only players carrying a departure marker get an entry here, so a lookup
+  // returning undefined means "never left".
+  const leaveIndexOfId = new Map<string, number>();
   for (const p of seatOrder) {
     nameOfId.set(p.id, p.name);
     joinIndexOfId.set(p.id, p.joinsBeforeRoundIndex ?? 0);
+    if (p.leavesBeforeRoundIndex !== undefined) {
+      leaveIndexOfId.set(p.id, p.leavesBeforeRoundIndex);
+    }
   }
 
   // Running state, rebuilt from scratch as we replay history.
@@ -187,6 +220,11 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
   // added to this set when the replay reaches their join round, at which point
   // their seed is derived (never stored).
   const joined = new Set<string>();
+  // [MID-GAME DEPARTURE] Mirror of `joined`: filled by `applyLeavesBefore` when
+  // the replay reaches a player's departure round. Once in here their total
+  // never moves again, because every scoring, halving and elimination loop
+  // iterates the ACTIVE set.
+  const left = new Set<string>();
   for (const p of seatOrder) {
     totals.set(p.id, 0);
     successfulYaniv.set(p.id, 0);
@@ -194,9 +232,32 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     if ((p.joinsBeforeRoundIndex ?? 0) === 0) joined.add(p.id);
   }
 
-  // Active = has joined AND not eliminated. Seat order preserved.
+  // Active = has joined AND not eliminated AND not left. Seat order preserved.
   const activeIds = (): string[] =>
-    seatOrder.map((p) => p.id).filter((id) => joined.has(id) && !eliminated.has(id));
+    seatOrder
+      .map((p) => p.id)
+      .filter((id) => joined.has(id) && !eliminated.has(id) && !left.has(id));
+
+  /**
+   * [MID-GAME DEPARTURE] Mark any players whose leave index === `roundIndex` as
+   * having left, freezing their total where it stands. Returns the leave events
+   * for the round's resolved view.
+   *
+   * ORDER IS LOAD-BEARING: this runs BEFORE `seedJoinsBefore` at each round
+   * index, because a joiner's seed is the highest cumulative total among ACTIVE
+   * players at that moment, and someone who has just walked out must not
+   * inflate a newcomer's starting score.
+   */
+  const applyLeavesBefore = (roundIndex: number): LeaveEvent[] => {
+    const events: LeaveEvent[] = [];
+    for (const p of seatOrder) {
+      if (left.has(p.id)) continue;
+      if (leaveIndexOfId.get(p.id) !== roundIndex) continue;
+      left.add(p.id);
+      events.push({ playerId: p.id, finalTotal: totals.get(p.id)! });
+    }
+    return events;
+  };
 
   /**
    * [MID-GAME JOIN] Seed any players whose join index === `roundIndex` and who
@@ -240,6 +301,11 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
         `Round ${i} recorded after the game already ended (only one active player remained).`,
       );
     }
+
+    // [MID-GAME DEPARTURE] Apply departures taking effect before this round
+    // FIRST, so a player who has gone home neither has a hand asked of them for
+    // round i nor inflates the seed of anyone joining at the same index.
+    const leaves = applyLeavesBefore(i);
 
     // [MID-GAME JOIN] Apply any joins taking effect before this round, seeding
     // derived starting scores. Must happen before the round is resolved so the
@@ -378,26 +444,41 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
       halvings,
       eliminations,
       joins,
+      leaves,
       startsNextId: nextStarter,
       catcherIds,
     });
 
     // --- [RULE 6] Auto-end when one active player remains ---
+    // NOT gated on `knockoutScore`: a DEPARTURE can leave one player at the
+    // table in a game with no elimination score, and that ends the game too.
+    // Widening this cannot change any game without a departure — with no
+    // knockout score nothing ever enters the `eliminated` set (the [RULE 5]
+    // block is its only writer and is knockout-gated), with no departure
+    // nothing enters `left`, and validation requires two players from round 0
+    // while `joined` only grows, so the active count never falls below two.
     const remaining = activeIds();
-    if (settings.knockoutScore !== null && remaining.length === 1) {
+    if (remaining.length === 1) {
       gameOver = true;
       startsNextId = null;
     } else {
-      // If the chosen next starter was just eliminated (possible when an Assaf
+      // If the chosen next starter is no longer active (possible when an Assaf
       // catcher crosses the knockout the same round), pass the start clockwise
       // to the next active seat after the caller.
-      if (eliminated.has(nextStarter)) {
-        startsNextId = nextActiveAfterSeat(seatOrder, eliminated, callerId);
+      const activeAfter = new Set(remaining);
+      if (!activeAfter.has(nextStarter)) {
+        startsNextId = nextActiveAfterSeat(seatOrder, activeAfter, callerId);
       } else {
         startsNextId = nextStarter;
       }
     }
   }
+
+  // [MID-GAME DEPARTURE] Apply any departure taking effect AFTER the last
+  // recorded round. This is the COMMON case for a departure — the scorekeeper
+  // marks someone as gone and the next round is played without them. Applied
+  // BEFORE the pending joins below, for the seed reason in `applyLeavesBefore`.
+  const pendingLeaves = applyLeavesBefore(history.length);
 
   // [MID-GAME JOIN] Seed any join taking effect AFTER the last recorded round
   // (join index === history.length): the player has joined but no round has been
@@ -419,17 +500,30 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     seat: p.seat,
     total: totals.get(p.id)!,
     eliminated: eliminated.has(p.id),
+    left: left.has(p.id),
     successfulYanivCount: successfulYaniv.get(p.id)!,
     caughtAssafCount: caughtAssaf.get(p.id)!,
   }));
 
   // --- Winner / game-over resolution ---
+  // Purely "one active player remains", independent of `knockoutScore` — see
+  // the mid-loop note above for why widening this is safe. The zero-active case
+  // is defensive only (unreachable through the app, since the game is already
+  // over at one) and ends the game with NO winner rather than crowning nobody's
+  // total or throwing.
   const remaining = activeIds();
+  const remainingSet = new Set(remaining);
   let winnerId: string | null = null;
-  if (settings.knockoutScore !== null && remaining.length === 1) {
+  if (remaining.length <= 1) {
     gameOver = true;
-    winnerId = remaining[0]!;
+    winnerId = remaining[0] ?? null;
     startsNextId = null;
+  } else if (startsNextId !== null && !remainingSet.has(startsNextId)) {
+    // [MID-GAME DEPARTURE] The commonest departure is the player who was due to
+    // start the next round. The turn passes as it does at a real table: walk
+    // clockwise from THEIR OWN seat (not from the last caller) and give the
+    // start to the first active player found.
+    startsNextId = nextActiveAfterSeat(seatOrder, remainingSet, startsNextId);
   }
 
   return {
@@ -439,36 +533,46 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     startsNextId,
     activePlayerIds: remaining,
     pendingJoins,
+    pendingLeaves,
     gameOver,
     winnerId,
   };
 }
 
 /**
- * Find the next active player clockwise after `callerSeat`, skipping eliminated
- * players. Falls back to the caller if somehow nobody else is active (caller is
- * guaranteed active at the point this is called).
+ * Find the next ACTIVE player clockwise after `fromId`'s seat.
+ *
+ * Takes the active set rather than the eliminated set, so it skips everyone who
+ * is not playing — eliminated, departed, and not-yet-joined alike. (Passing the
+ * eliminated set could nominate a player who had not joined yet.) Returns null
+ * when nobody is active, and when `fromId` is themselves no longer active,
+ * which is exactly the departure case: there is no sensible fall-back to the
+ * player we are walking away from.
+ *
+ * The walk is bounded by ONE FULL LAP (`step <= n`), so it always terminates.
  */
 function nextActiveAfterSeat(
   seatOrder: Player[],
-  eliminated: Set<string>,
-  callerId: string,
-): string {
+  activeSet: Set<string>,
+  fromId: string,
+): string | null {
   const n = seatOrder.length;
-  // seatOrder is sorted by seat. Walk by sorted position from the caller so
-  // non-contiguous seat numbers (in theory) still wrap correctly.
-  const idxOfCaller = seatOrder.findIndex((p) => p.id === callerId);
+  // seatOrder is sorted by seat. Walk by sorted position so non-contiguous seat
+  // numbers (in theory) still wrap correctly. An unknown `fromId` yields -1,
+  // which the modulo turns into "start the lap at position 0".
+  const from = seatOrder.findIndex((p) => p.id === fromId);
   for (let step = 1; step <= n; step++) {
-    const cand = seatOrder[(idxOfCaller + step) % n]!;
-    if (!eliminated.has(cand.id)) return cand.id;
+    const cand = seatOrder[(from + step + n) % n]!;
+    if (activeSet.has(cand.id)) return cand.id;
   }
-  return callerId;
+  return null;
 }
 
 /**
  * Test-only access to internal helpers. NOT part of the public engine API and
- * NOT re-exported from index.ts — exposed solely so the defensive clockwise
- * tie-break logic can be exercised against gappy seat values that the public
- * `recompute` entry point rejects at validation. Do not use in app code.
+ * NOT re-exported from index.ts — exposed so the defensive clockwise tie-break
+ * logic can be exercised against gappy seat values that the public `recompute`
+ * entry point rejects at validation, and so the clockwise walk can be shown to
+ * terminate for arrangements `recompute` cannot reach. Do not use in app code.
  */
-export const __testInternals = { lowestThenClockwise };
+export const __testInternals = { lowestThenClockwise, nextActiveAfterSeat };

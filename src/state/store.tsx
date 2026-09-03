@@ -23,7 +23,13 @@ import {
   useRef,
   type ReactNode,
 } from 'react';
-import { recompute, type GameSettings, type GameState, type RoundEntry } from '../engine';
+import {
+  recompute,
+  removalPlan,
+  type GameSettings,
+  type GameState,
+  type RoundEntry,
+} from '../engine';
 import { clearGame, loadGame, saveGame } from './persistence';
 import { initialState, reducer, type Action } from './reducer';
 import type { AppState, GameStateSlice, StorageWarning } from './types';
@@ -45,6 +51,19 @@ export interface StoreActions {
    * original player.
    */
   removePlayer: (playerId: string) => void;
+  /**
+   * MID-GAME DEPARTURE: someone has gone home while the game carries on.
+   *
+   * One entry point, two paths — `removalPlan` in the engine decides which, so
+   * this helper and the screen cannot drift apart. A player who has played no
+   * recorded round is taken out of the game entirely; everyone else gets a
+   * departure marker and keeps their seat, their column and their frozen score.
+   * A blocked plan is a no-op: the screen does not offer the control in that
+   * case, and this is the backstop.
+   *
+   * NOT undoable, by design.
+   */
+  leavePlayer: (playerId: string) => void;
   /** Undo the most recent round only (locked: most-recent-only). */
   undoLastRound: () => void;
   /** Edit the most recent round only (locked: most-recent-only). */
@@ -200,6 +219,10 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
   settingsRef.current = state.settings;
   const historyLenRef = useRef(state.history.length);
   historyLenRef.current = state.history.length;
+  // `removalPlan` replays the game to ask who is active, so it needs the list
+  // itself rather than just its length.
+  const historyRef = useRef(state.history);
+  historyRef.current = state.history;
 
   const actions: StoreActions = useMemo(
     () => ({
@@ -221,6 +244,13 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
         dispatch({ type: 'ADD_PLAYER', player });
       },
       removePlayer: (playerId) => dispatch({ type: 'REMOVE_PLAYER', playerId }),
+      leavePlayer: (playerId) => {
+        const current = settingsRef.current;
+        if (current === null) return;
+        const plan = removalPlan(historyRef.current, current, playerId);
+        if (plan.mode === 'delete') dispatch({ type: 'REMOVE_PLAYER', playerId });
+        else if (plan.mode === 'mark') dispatch({ type: 'LEAVE_PLAYER', playerId });
+      },
       addRound: (round) => dispatch({ type: 'ADD_ROUND', round }),
       undoLastRound: () => dispatch({ type: 'UNDO_LAST_ROUND' }),
       editLastRound: (round) => dispatch({ type: 'EDIT_LAST_ROUND', round }),

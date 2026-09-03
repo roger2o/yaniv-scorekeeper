@@ -47,6 +47,24 @@ export interface Player {
    * on the next recompute. The seeded total does NOT trigger 100-halving.
    */
   joinsBeforeRoundIndex?: number;
+  /**
+   * MID-GAME DEPARTURE MARKER — the exact mirror of `joinsBeforeRoundIndex`.
+   * The 0-based round index BEFORE which this player stops being active: they
+   * last play round `leavesBeforeRoundIndex - 1` and are absent from round
+   * `leavesBeforeRoundIndex` and every round after it. Absent (undefined) means
+   * the player never left. The app always writes it as the current
+   * `history.length` — "absent from the next round to be played onward".
+   *
+   * The player is NEVER deleted: seats are an enforced contiguous set {0..n-1},
+   * and their scoresheet column and recorded hands are still keyed to them. So
+   * a departure is a marker, and their total simply freezes where it stood.
+   *
+   * Must satisfy `leavesBeforeRoundIndex > (joinsBeforeRoundIndex ?? 0)` — a
+   * player cannot leave before or in the same breath as joining, because that
+   * would create a standings row for someone who never played a round. Someone
+   * with no recorded round is removed from `players` outright instead.
+   */
+  leavesBeforeRoundIndex?: number;
 }
 
 /** Immutable game settings chosen at setup. */
@@ -111,6 +129,17 @@ export interface JoinEvent {
 }
 
 /**
+ * A mid-game DEPARTURE taking effect immediately BEFORE a given round. The
+ * `finalTotal` is the player's frozen cumulative total at the moment they left;
+ * like a join's seed it is derived on every recompute and never persisted.
+ */
+export interface LeaveEvent {
+  playerId: string;
+  /** Cumulative total at the moment of leaving — frozen from here on. */
+  finalTotal: number;
+}
+
+/**
  * Fully resolved view of a single round, derived from the RoundEntry plus the
  * running game state at that point. Part of the recomputed game state.
  */
@@ -136,6 +165,12 @@ export interface ResolvedRound {
    * round onward), with their derived seed score. Empty for rounds with no join.
    */
   joins: JoinEvent[];
+  /**
+   * Players who LEFT the game immediately before this round (absent from this
+   * round onward), with their frozen final total. Empty for rounds with no
+   * departure.
+   */
+  leaves: LeaveEvent[];
   /** Player id who starts the NEXT round (caller on Yaniv, catcher on Assaf). */
   startsNextId: string;
   /**
@@ -154,6 +189,13 @@ export interface StandingRow {
   total: number;
   /** True once eliminated (cumulative strictly exceeded the knockout score). */
   eliminated: boolean;
+  /**
+   * True once the player has LEFT the table (their departure round has been
+   * reached). They keep their row and their frozen total, but they are excluded
+   * from winning and from the live-leader crown, exactly as an eliminated
+   * player is. Where both are somehow true, "left" is what the UI shows.
+   */
+  left: boolean;
   /** Number of rounds this player called that resolved as a successful Yaniv. */
   successfulYanivCount: number;
   /**
@@ -183,9 +225,9 @@ export interface GameState {
    */
   startsNextId: string | null;
   /**
-   * Ids of players still active — JOINED and not eliminated — in seat order.
-   * A mid-game joiner whose join point has not yet been reached on replay is
-   * NOT active and does not appear here.
+   * Ids of players still active — JOINED and not eliminated and not LEFT — in
+   * seat order. A mid-game joiner whose join point has not yet been reached on
+   * replay is NOT active and does not appear here.
    */
   activePlayerIds: string[];
   /**
@@ -195,6 +237,14 @@ export interface GameState {
    * reported on that round's `joins` instead.
    */
   pendingJoins: JoinEvent[];
+  /**
+   * [MID-GAME DEPARTURE] Players who left immediately AFTER the last recorded
+   * round, with their frozen total. Unlike joins this is the COMMON case for a
+   * departure — the scorekeeper marks someone as gone and the next round is
+   * then played without them — so it is not an edge-case field. Departures that
+   * fall before a recorded round are reported on that round's `leaves` instead.
+   */
+  pendingLeaves: LeaveEvent[];
   /** True once the game has auto-ended (one active player remains). */
   gameOver: boolean;
   /** Winner player id when the game is over (lowest total / sole survivor). */
