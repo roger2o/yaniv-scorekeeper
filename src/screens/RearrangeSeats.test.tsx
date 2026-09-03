@@ -234,7 +234,9 @@ describe('Rearrange seats — accessible move controls (buttons, not gestures)',
     const moves = screen
       .getByTestId('rearrange-seats')
       .querySelectorAll<HTMLButtonElement>('.rearrange__move');
-    expect(moves.length).toBe(8);
+    // THREE controls per row now — move earlier, move later, and remove — so
+    // 12 across four players.
+    expect(moves.length).toBe(12);
     for (const btn of Array.from(moves)) expect(btn.disabled).toBe(false);
   });
 

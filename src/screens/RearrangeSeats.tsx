@@ -26,6 +26,15 @@
  *  - Nothing is applied until "Save order". Cancel simply discards the draft, so
  *    the arrangement is exactly as it was on entering the mode.
  *
+ * REMOVING A PLAYER is the one thing on this screen that is NOT display-only,
+ * and it deliberately breaks the staged model above: it applies IMMEDIATELY,
+ * behind its own confirmation, and Cancel does not bring the player back (Cancel
+ * only discards the ORDERING draft). It lives here because this is already the
+ * "who is round the table" screen and the minus belongs beside the move buttons;
+ * the confirmation copy is what carries the difference, and it never implies the
+ * removal can be taken back. There is no bring-back control: someone returning
+ * to the table comes back through "Add player" like any other mid-game join.
+ *
  * DIRECTION (verified against ringLayout.ts, not assumed): the ring places seat
  * index i at `xPct = 50 − r·sin(i·360/N)`, so index 0 is bottom-centre and index
  * 1 lands at x = 12%, the LEFT edge. Position 1 therefore sits nearest the phone
@@ -35,8 +44,9 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GameState } from '../engine';
+import { removalPlan, type GameState, type RemovalPlan } from '../engine';
 import { useStore } from '../state';
+import { ConfirmDialog } from './ConfirmDialog';
 import { seatColorVar, seatShape } from './seat';
 import { isEngineSeatOrder, reconcileRingOrder } from './ringOrder';
 import './RearrangeSeats.css';
@@ -48,12 +58,13 @@ export interface RearrangeSeatsProps {
 }
 
 export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
-  const { state, setRingOrder } = useStore();
+  const { state, setRingOrder, leavePlayer } = useStore();
 
   // The engine's seat order is the authority we reconcile against and the
-  // fallback we can always return to.
+  // fallback we can always return to. A player who has LEFT is not round the
+  // table any more, so they are not in the ring and not in this list.
   const seatOrderIds = useMemo(
-    () => game.standings.map((s) => s.playerId),
+    () => game.standings.filter((s) => !s.left).map((s) => s.playerId),
     [game.standings],
   );
   const rowById = useMemo(
@@ -69,6 +80,25 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
 
   const nameOf = (playerId: string) => rowById.get(playerId)?.name ?? 'Player';
   const namesOf = (order: readonly string[]) => order.map(nameOf).join(', ');
+
+  // Whether — and how — each player can be removed. The POLICY lives in the
+  // engine (removal.ts), so this screen and the store cannot drift apart on it;
+  // all this does is ask. Computed once per game state rather than once per row
+  // render, because each answer replays the game to find out who is active.
+  const plans = useMemo(() => {
+    const settings = state.settings;
+    const byId = new Map<string, RemovalPlan>();
+    if (settings === null) return byId;
+    for (const row of game.standings) {
+      byId.set(row.playerId, removalPlan(state.history, settings, row.playerId));
+    }
+    return byId;
+  }, [state.history, state.settings, game.standings]);
+
+  // The player the scorekeeper is being asked to confirm removing, plus the
+  // button that asked, so focus can go back there if they change their mind.
+  const [removing, setRemoving] = useState<string | null>(null);
+  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   /**
    * The polite announcement, plus a bump counter.
@@ -105,6 +135,18 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Confirming a removal destroys the button that was focused, so focus is put
+  // back on the heading rather than left on <body> (WCAG 2.4.3). Same flag +
+  // effect pattern PlayScreen uses on the way out of this mode. On CANCEL the
+  // dialog returns focus to the minus button itself, which is still there.
+  const refocusHeading = useRef(false);
+  useEffect(() => {
+    if (removing === null && refocusHeading.current) {
+      refocusHeading.current = false;
+      headingRef.current?.focus();
+    }
+  }, [removing]);
+
   /** Move a player one place earlier (-1) or later (+1), wrapping round the ring. */
   const move = (playerId: string, delta: -1 | 1) => {
     const from = draft.indexOf(playerId);
@@ -138,6 +180,24 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
     // Spoken form stays explicit about WHAT is reset; the button label has to be
     // short enough to keep the action bar on one row.
     announce(`Reset to the setup order: ${namesOf(next)}.`);
+  };
+
+  /**
+   * Apply the removal at once, and take the row out of the open draft in the
+   * same breath. The draft is local state seeded on entry and the rows are
+   * rendered from it, so without this splice the departed player would keep
+   * showing as a normal movable row until the mode was left and re-entered —
+   * and "Save order" would then store an arrangement containing them.
+   */
+  const confirmRemoval = (playerId: string) => {
+    const name = nameOf(playerId);
+    setDraft((prev) => prev.filter((id) => id !== playerId));
+    refocusHeading.current = true;
+    setRemoving(null);
+    leavePlayer(playerId);
+    // Every other change on this screen is announced; a removal is the one that
+    // matters most, so it is announced too.
+    announce(`${name} removed from the game.`);
   };
 
   const save = () => {
@@ -212,6 +272,26 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
                 </span>
               </span>
               <span className="rearrange__moves">
+                {/* REMOVE. Offered only where the engine says removal is
+                    actually available, so there is never a dead control: in a
+                    two-player game with no rounds recorded there is nothing to
+                    remove down to, and a knocked-out player is already out. */}
+                {plans.get(playerId)?.mode !== 'blocked' && (
+                  <button
+                    type="button"
+                    className="rearrange__move rearrange__move--remove"
+                    aria-label={`Remove ${row.name} from the game`}
+                    title={`Remove ${row.name} from the game`}
+                    aria-haspopup="dialog"
+                    data-testid={`remove-${playerId}`}
+                    onClick={(e) => {
+                      removeTriggerRef.current = e.currentTarget;
+                      setRemoving(playerId);
+                    }}
+                  >
+                    <span aria-hidden="true">−</span>
+                  </button>
+                )}
                 {isPair ? (
                   <button
                     type="button"
@@ -277,6 +357,69 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
           <span className="rearrange__actions-label">Save order</span>
         </button>
       </div>
+
+      {removing !== null && (
+        <RemovalConfirm
+          game={game}
+          playerId={removing}
+          plan={plans.get(removing)}
+          returnFocusTo={removeTriggerRef.current}
+          onCancel={() => setRemoving(null)}
+          onConfirm={() => confirmRemoval(removing)}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * The confirmation in front of a removal. Its copy is the whole safety
+ * mechanism, so it states three things and no more: that the player stops
+ * playing NOW, what happens to their score, and — when it applies — that this
+ * ends the game and who wins. It never mentions Cancel or undo, because neither
+ * brings the player back.
+ */
+function RemovalConfirm({
+  game,
+  playerId,
+  plan,
+  returnFocusTo,
+  onCancel,
+  onConfirm,
+}: {
+  game: GameState;
+  playerId: string;
+  plan: RemovalPlan | undefined;
+  returnFocusTo: HTMLElement | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const row = game.standings.find((s) => s.playerId === playerId);
+  const name = row?.name ?? 'This player';
+  const endsGame = plan?.mode === 'mark' && plan.endsGame;
+  // Whoever is left when this player goes. Only meaningful when the removal ends
+  // the game, in which case the engine will crown exactly this player.
+  const survivor = endsGame
+    ? game.standings.find(
+        (s) => s.playerId !== playerId && game.activePlayerIds.includes(s.playerId),
+      )
+    : undefined;
+
+  return (
+    <ConfirmDialog
+      testId="confirm-remove-player"
+      title={`Remove ${name}?`}
+      confirmLabel={`Remove ${name}`}
+      cancelLabel="Keep them in"
+      returnFocusTo={returnFocusTo}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    >
+      {endsGame && survivor
+        ? `This ends the game and ${survivor.name} wins. ${name} stops playing now and keeps their score of ${row?.total ?? 0}, marked as having left. This can’t be undone.`
+        : plan?.mode === 'delete'
+          ? `${name} hasn’t played a round yet, so they come off the table completely. This can’t be undone.`
+          : `${name} stops playing now. Their score of ${row?.total ?? 0} stays on the scoresheet, marked as having left. This can’t be undone.`}
+    </ConfirmDialog>
   );
 }

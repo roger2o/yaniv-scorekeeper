@@ -22,6 +22,10 @@
  *
  * A mid-game joiner's column is blank (—) for the rounds before they joined;
  * their seed shows at the join point. The grid handles the player set growing.
+ * A player who LEAVES mid-game is the mirror image: their cells are blank from
+ * the round they left onward, their last played round carries a "left" marker,
+ * and their frozen total stays in the header and the totals row — this is the
+ * paper record, so their score does not disappear when they do.
  *
  * Primary motion is VERTICAL (rounds scroll down). On tight tables (up to 6
  * players at 375px) the sticky header row + sticky round column let the player
@@ -34,13 +38,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { GameState, ResolvedRound } from '../engine';
 import { seatColorVar, seatShape } from './seat';
+import { leaderIdOf } from './leader';
 import './BigBoard.css';
-
-function leaderIdOf(game: GameState): string | null {
-  const contenders = game.standings.filter((s) => !s.eliminated);
-  if (contenders.length === 0) return null;
-  return contenders.reduce((best, s) => (s.total < best.total ? s : best)).playerId;
-}
 
 /**
  * Plain-language announcement when a round lands, for a screen-reader user
@@ -56,7 +55,12 @@ function boardAnnouncement(game: GameState): string {
     game.standings.find((s) => s.playerId === id)?.name ?? 'A player';
   const outcome = last.outcome === 'ASSAF' ? 'an Assaf' : 'a Yaniv';
   const totals = game.standings
-    .map((s) => `${s.name} ${s.total}${s.eliminated ? ' (out)' : ''}`)
+    .map(
+      (s) =>
+        // "left" supersedes "out": a departed player is off the table whatever
+        // else is true of them.
+        `${s.name} ${s.total}${s.left ? ' (left)' : s.eliminated ? ' (out)' : ''}`,
+    )
     .join(', ');
   return `Round ${last.index + 1} recorded — ${nameOf(last.callerId)} called ${outcome}. Totals now: ${totals}.`;
 }
@@ -71,7 +75,7 @@ function roundNote(game: GameState, round: ResolvedRound): string {
 }
 
 export function BigBoard({ game }: { game: GameState }) {
-  const leaderId = leaderIdOf(game);
+  const leaderId = leaderIdOf(game.standings);
   // Columns = players in STATIC SEATING ORDER. standings is already seat-ordered.
   const players = game.standings;
 
@@ -100,6 +104,22 @@ export function BigBoard({ game }: { game: GameState }) {
   }
   // A player with no recorded join event is an original (active from round 0).
   const joinIndexOf = (playerId: string) => joinIndexById.get(playerId) ?? 0;
+
+  // The mirror of the above for DEPARTURES: the 0-based round index from which a
+  // player is no longer at the table. From that round onward their cells render
+  // BLANK, exactly like the pre-join blanks, and their last played round carries
+  // a "left" marker. Their frozen total stays in the header and the totals row.
+  // (The engine keeps carrying that frozen total in `cumulativeAfter` for later
+  // rounds — by design; the blanking is the scoresheet's job, not the engine's.)
+  const leaveIndexById = new Map<string, number>();
+  for (const round of game.rounds) {
+    for (const l of round.leaves) leaveIndexById.set(l.playerId, round.index);
+  }
+  // A departure landing after the last recorded round is the COMMON case: their
+  // last played round is the final one, so the marker sits one past the sheet.
+  for (const l of game.pendingLeaves) {
+    leaveIndexById.set(l.playerId, game.rounds.length);
+  }
 
   // --- Horizontal-overflow hint (T-B1) -------------------------------------
   // When the player columns overflow the viewport (6+ players at 375px), the
@@ -157,6 +177,7 @@ export function BigBoard({ game }: { game: GameState }) {
                   className="scoresheet__player-head num"
                   data-leader={isLeader}
                   data-eliminated={p.eliminated}
+                  data-left={p.left}
                   title={p.name}
                 >
                   <span className="scoresheet__player-name">
@@ -173,10 +194,18 @@ export function BigBoard({ game }: { game: GameState }) {
                       <span aria-hidden="true">👑</span> leader
                     </span>
                   )}
-                  {p.eliminated && (
+                  {/* "left" supersedes "out" — a player who has gone home is off
+                      the table whether or not they were also knocked out. */}
+                  {p.left ? (
                     <span className="scoresheet__head-tag scoresheet__head-tag--out">
-                      out
+                      left
                     </span>
+                  ) : (
+                    p.eliminated && (
+                      <span className="scoresheet__head-tag scoresheet__head-tag--out">
+                        out
+                      </span>
+                    )
                   )}
                 </th>
               );
@@ -221,6 +250,20 @@ export function BigBoard({ game }: { game: GameState }) {
 
                   {players.map((p) => {
                     const joinIndex = joinIndexOf(p.playerId);
+                    const leaveIndex = leaveIndexById.get(p.playerId);
+                    // Gone from the table this round onward -> blank cell, the
+                    // mirror of the pre-join blank below.
+                    if (leaveIndex !== undefined && round.index >= leaveIndex) {
+                      return (
+                        <td
+                          key={p.playerId}
+                          className="scoresheet__cell scoresheet__cell--blank num"
+                          aria-label={`${p.name} had left the game`}
+                        >
+                          <span aria-hidden="true">—</span>
+                        </td>
+                      );
+                    }
                     // Not active yet this round -> blank cell.
                     if (round.index < joinIndex) {
                       return (
@@ -312,6 +355,13 @@ export function BigBoard({ game }: { game: GameState }) {
                               <span aria-hidden="true">✕</span> out
                             </span>
                           )}
+                          {/* Their LAST PLAYED round, so the sheet says where the
+                              blanks below it start and why. */}
+                          {leaveIndex === round.index + 1 && (
+                            <span className="scoresheet__mark scoresheet__mark--out">
+                              <span aria-hidden="true">→</span> left
+                            </span>
+                          )}
                         </span>
                       </td>
                     );
@@ -343,6 +393,7 @@ export function BigBoard({ game }: { game: GameState }) {
                   data-starts-next={startsNext}
                   data-leader={isLeader}
                   data-eliminated={p.eliminated}
+                  data-left={p.left}
                 >
                   <span className="scoresheet__total tabular">{p.total}</span>
                   {/* Reinforce the leader where the eye looks for "who's winning"
@@ -358,10 +409,19 @@ export function BigBoard({ game }: { game: GameState }) {
                       <span aria-hidden="true">▸</span> starts next
                     </span>
                   )}
-                  {p.eliminated && (
+                  {/* Again "left" supersedes "out": their total is frozen and
+                      they are not in contention, which is the fact that matters
+                      at a glance. */}
+                  {p.left ? (
                     <span className="scoresheet__mark scoresheet__mark--out">
-                      <span aria-hidden="true">✕</span> out
+                      <span aria-hidden="true">→</span> left
                     </span>
+                  ) : (
+                    p.eliminated && (
+                      <span className="scoresheet__mark scoresheet__mark--out">
+                        <span aria-hidden="true">✕</span> out
+                      </span>
+                    )
                   )}
                 </td>
               );

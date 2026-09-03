@@ -38,7 +38,7 @@
  *   lead + note     --ink-muted on --surface     6.75 /  5.72
  *   player name     --ink on --surface-raised    6.22 / 15.93
  *   position badge  --accent-ink on --accent     6.81 /  4.86
- *   move button     --ink on --surface           8.47 / 15.05
+ *   move + remove   --ink on --surface           8.47 / 15.05
  *   "out" marker    --ink on --surface-raised    6.22 / 15.93
  * All clear the WCAG AA 4.5:1 small-text floor.
  *
@@ -95,7 +95,7 @@
 .rearrange__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 8px 10px;
   background: var(--surface-raised);
   border: 2px solid var(--border);
@@ -148,8 +148,9 @@
 .rearrange__moves {
   flex: 0 0 auto;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
+
 
 /* Move controls are the primary controls of this screen, so they sit at the
    project's 56px touch-target floor. */
@@ -175,6 +176,27 @@
   padding: 0 14px;
   font-family: var(--font-display);
   font-size: 0.95rem;
+}
+
+/* REMOVE. Same 56px face and the same --accent edge as the move buttons, and
+ * deliberately NO red: `--danger` measures 1.23:1 against the raised row on
+ * Felt (the figure is in the "out" note above), so a red edge would fail the 3:1
+ * non-text bar rather than merely being redundant. The minus glyph and the full
+ * accessible name ("Remove <name> from the game") carry the meaning, which is
+ * the same rule the rest of this screen follows. The glyph runs larger than the
+ * arrows because a bare "−" at their size reads as a hyphen.
+ *
+ * WIDTH, arithmetic from these rules rather than measured (jsdom has no layout
+ * engine, so no test here can check it — the file already asks for a real-device
+ * pass at 375px). At 375px: .app-frame leaves 343px, the row's 10px padding
+ * leaves 323px, the position badge takes 40px, the two row gaps 20px, and the
+ * three controls 180px (3 x 56 + 2 x 6) — so the name gets about 83px. Long
+ * names wrap onto a second line there, which is the behaviour this screen
+ * already chose over truncation. The gaps above were tightened from 12px/8px to
+ * 10px/6px to buy that name column 10px when the third control appeared. */
+.rearrange__move--remove {
+  font-size: 1.6rem;
+  line-height: 1;
 }
 
 /* Sticky footer: always reachable, whatever the player count.

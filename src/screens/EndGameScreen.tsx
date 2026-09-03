@@ -23,9 +23,15 @@
  * of it. The words carry the same information in less space and say more, since
  * a star could never have distinguished a success from an Assaf.
  *
+ * A player who LEFT the game mid-way is listed with their score, marked as
+ * having left, and cannot win — the same treatment a knocked-out player gets.
+ * Someone who goes home on 124 does not win a game that runs on until the last
+ * two players are on 310 and 350; the survivor on 310 does.
+ *
  * Theme B (Party Arcade) shows a celebratory confetti burst on entry, gated
  * behind prefers-reduced-motion. Rematch restarts with the same players and
- * settings (fresh ids; mid-game joiners become normal round-0 players).
+ * settings (fresh ids; mid-game joiners and departed players alike become
+ * normal round-0 players).
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -33,6 +39,7 @@ import { useStore } from '../state';
 import type { GameSettings } from '../engine';
 import { useTheme } from '../theme';
 import { makePlayerId, seatColorVar, seatShape } from './seat';
+import { leaderIdOf, lowestTotalId } from './leader';
 import { Confetti } from './Confetti';
 import { ConfirmDialog } from './ConfirmDialog';
 import './EndGameScreen.css';
@@ -100,20 +107,23 @@ export function EndGameScreen() {
     );
   }
 
-  // Winner selection must MATCH the live leader shown on the Play/Big-board
-  // screens (PlayScreen.leaderIdOf / BigBoard): lowest cumulative total among
-  // NON-eliminated players, ties broken by seat order (first minimum — standings
-  // are in seat order, so the first row to hit the minimum wins the tie). If the
-  // engine auto-ended (sole survivor / everyone else knocked out) its winnerId is
-  // authoritative. If somehow everyone is eliminated, fall back to the overall
-  // lowest total so the screen always names a winner.
-  const liveLeaderId = (() => {
-    const contenders = game.standings.filter((s) => !s.eliminated);
-    const pool = contenders.length > 0 ? contenders : game.standings;
-    if (pool.length === 0) return null;
-    return pool.reduce((best, s) => (s.total < best.total ? s : best)).playerId;
-  })();
+  // Winner selection must MATCH the live leader shown on the Play and Big-board
+  // screens, so all three read the SAME shared rule (screens/leader.ts): lowest
+  // cumulative total among players still in contention — not eliminated and not
+  // departed — ties to the earlier seat. If the engine auto-ended (sole
+  // survivor, or the last departure) its winnerId is authoritative.
+  //
+  // The fall-back chain matters. If somehow nobody is in contention we fall back
+  // to everyone who has NOT left before falling back to the whole table, so a
+  // departure can never hand someone the trophy on a technicality.
+  const liveLeaderId =
+    leaderIdOf(game.standings) ??
+    lowestTotalId(game.standings.filter((s) => !s.left)) ??
+    lowestTotalId(game.standings);
   const winnerId = game.winnerId ?? liveLeaderId;
+  // Whether the sheet holds anyone who went home, which changes what "lowest
+  // score wins" can honestly claim.
+  const anyoneLeft = game.standings.some((s) => s.left);
   const winner = game.standings.find((s) => s.playerId === winnerId) ?? null;
 
   // Final standings table is sorted lowest-first (a result screen, not the live
@@ -140,8 +150,13 @@ export function EndGameScreen() {
 
   const rematch = () => {
     if (state.settings === null) return;
-    // Same names + settings, fresh ids, contiguous seats, no join markers
-    // (everyone starts from round 0 again).
+    // Same names + settings, fresh ids, contiguous seats, and NEITHER kind of
+    // marker — no join markers and no departure markers, so everyone is back in
+    // from round 0. That falls out of copying only the NAME: do not be tempted
+    // to spread the old player in here, or both markers come back with it. A
+    // player who went home is still offered a chair, which is right — rematch
+    // is "same names, new game", and if they have really gone the scorekeeper
+    // starts a fresh game instead.
     const oldPlayers = [...state.settings.players].sort((a, b) => a.seat - b.seat);
     const players = oldPlayers.map((p, i) => ({
       id: makePlayerId(i),
@@ -197,7 +212,12 @@ export function EndGameScreen() {
 
       <h2 className="section-title">Final standings</h2>
       <table className="standings-table end__table">
-        <caption className="sr-only">Final standings, lowest score wins</caption>
+        <caption className="sr-only">
+          Final standings, lowest score wins
+          {anyoneLeft
+            ? '. A player who left the game is listed with their score but cannot win.'
+            : ''}
+        </caption>
         <thead>
           <tr>
             <th scope="col">#</th>
@@ -215,6 +235,7 @@ export function EndGameScreen() {
             <tr
               key={row.playerId}
               data-eliminated={row.eliminated}
+              data-left={row.left}
               data-leader={row.playerId === winnerId}
             >
               <td className="tabular">{i + 1}</td>
@@ -223,6 +244,9 @@ export function EndGameScreen() {
                   {seatShape(row.seat)}
                 </span>{' '}
                 {row.name}
+                {/* Their score is on the sheet, so the sheet has to say why it
+                    did not win. Real text, no colour dependency. */}
+                {row.left && <span className="end__left"> — left</span>}
                 {row.playerId === winnerId && <span aria-hidden="true"> 👑</span>}
               </td>
               <td className="num">{row.total}</td>

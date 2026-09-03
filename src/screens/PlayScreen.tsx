@@ -46,6 +46,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { RearrangeSeats } from './RearrangeSeats';
 import { ringSlots, MAX_RING_PLAYERS } from './ringLayout';
 import { reconcileRingOrder } from './ringOrder';
+import { leaderIdOf } from './leader';
 import { seatColorVar, seatShape } from './seat';
 import './PlayScreen.css';
 
@@ -83,23 +84,45 @@ export function PlayScreen() {
   // their join. In that case we offer to REMOVE the stranded latecomer (the
   // most recently-joined player). Otherwise we offer to undo the last round.
   if (game === null) {
-    const joiners = (state.settings?.players ?? []).filter(
-      (p) => (p.joinsBeforeRoundIndex ?? 0) > 0,
-    );
+    const players = state.settings?.players ?? [];
+    const joiners = players.filter((p) => (p.joinsBeforeRoundIndex ?? 0) > 0);
     const stranded = joiners.length > 0 ? joiners[joiners.length - 1]! : null;
     const isJoinError = engineError?.toLowerCase().includes('join') ?? false;
+    // A DEPARTURE marker can dangle the same way, in the one case the undo
+    // write-clamp refuses to move it (clamping would take it to or below the
+    // player's join point) and in a hand-edited save. Same recovery: one tap to
+    // take that player out of the game.
+    const departed =
+      players.find(
+        (p) =>
+          p.leavesBeforeRoundIndex !== undefined &&
+          p.leavesBeforeRoundIndex > state.history.length,
+      ) ?? null;
+    const isLeaveError =
+      engineError?.toLowerCase().includes('leaves before round') ?? false;
 
     return (
       <div className="app-frame">
         <div className="banner banner--danger" role="alert">
-          {stranded && isJoinError
-            ? `That change ends the game before ${stranded.name} joined. Remove ${stranded.name}, or undo the change.`
-            : engineError
-              ? `That change can’t be applied: ${engineError} Undo it to continue.`
-              : 'The game state is invalid. Undo the last change to continue.'}
+          {departed && isLeaveError
+            ? `That change goes back to before ${departed.name} left the game. Remove ${departed.name}, or undo the change.`
+            : stranded && isJoinError
+              ? `That change ends the game before ${stranded.name} joined. Remove ${stranded.name}, or undo the change.`
+              : engineError
+                ? `That change can’t be applied: ${engineError} Undo it to continue.`
+                : 'The game state is invalid. Undo the last change to continue.'}
         </div>
         <div className="play__actions">
-          {stranded && isJoinError && (
+          {departed && isLeaveError && (
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={() => removePlayer(departed.id)}
+            >
+              Remove {departed.name}
+            </button>
+          )}
+          {!(departed && isLeaveError) && stranded && isJoinError && (
             <button
               type="button"
               className="btn btn--primary"
@@ -125,8 +148,12 @@ export function PlayScreen() {
   }
 
   const playerCount = game.standings.length;
-  const slots = ringSlots(playerCount);
-  const useBoard = showBoard || slots === null || playerCount > MAX_RING_PLAYERS;
+  // A departed player's chip leaves the circle — the ring is the live picture of
+  // who is actually round the table — so the ring is sized and drawn from the
+  // players still seated. Their score stays on the scoresheet.
+  const seatedIds = game.standings.filter((s) => !s.left).map((s) => s.playerId);
+  const slots = ringSlots(seatedIds.length);
+  const useBoard = showBoard || slots === null || seatedIds.length > MAX_RING_PLAYERS;
 
   if (rearranging) {
     return (
@@ -144,10 +171,7 @@ export function PlayScreen() {
   // against who is actually at the table (a mid-game join or a removed player
   // must never leave a stale ring). Absent an arrangement this is exactly the
   // engine's seat order, which is the default and the fallback.
-  const ringOrder = reconcileRingOrder(
-    state.ringOrder,
-    game.standings.map((s) => s.playerId),
-  );
+  const ringOrder = reconcileRingOrder(state.ringOrder, seatedIds);
 
   const commitAddPlayer = () => {
     addPlayer(newName);
@@ -305,12 +329,6 @@ export function PlayScreen() {
 // Circle (ring) view
 // ---------------------------------------------------------------------------
 
-function leaderIdOf(game: GameState): string | null {
-  const contenders = game.standings.filter((s) => !s.eliminated);
-  if (contenders.length === 0) return null;
-  return contenders.reduce((best, s) => (s.total < best.total ? s : best)).playerId;
-}
-
 /**
  * The ring is drawn in the DISPLAY arrangement (`ringOrder`) — ring position 1 is
  * the bottom, upright seat. By default that arrangement IS the engine's seat
@@ -333,7 +351,7 @@ function RingView({
   ringOrder: readonly string[];
   onNewRound: () => void;
 }) {
-  const leaderId = leaderIdOf(game);
+  const leaderId = leaderIdOf(game.standings);
   const rowById = new Map(game.standings.map((s) => [s.playerId, s]));
   const rows = ringOrder
     .map((id) => rowById.get(id))

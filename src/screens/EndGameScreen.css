@@ -139,6 +139,19 @@
   color: inherit;
 }
 
+/* "left" on a departed player's row. It uses the row's OWN inherited ink and no
+   colour of its own, so it makes no new contrast claim: it reads at exactly
+   whatever the name beside it reads at, on both themes and on a dimmed
+   (eliminated) row alike. The word carries the meaning outright. */
+.end__left {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: inherit;
+  white-space: nowrap;
+}
+
 .end__stat {
   font-size: 0.95rem;
   color: var(--ink-muted);

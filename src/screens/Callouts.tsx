@@ -18,7 +18,7 @@ const DISMISS_MS = 3200;
 interface Callout {
   id: string;
   text: string;
-  tone: 'assaf' | 'halve' | 'out' | 'join';
+  tone: 'assaf' | 'halve' | 'out' | 'join' | 'left';
 }
 
 function deriveCallouts(game: GameState): Callout[] {
@@ -51,6 +51,13 @@ function deriveCallouts(game: GameState): Callout[] {
         text: `${nameOf(e.playerId)} is knocked out`,
       });
     }
+    for (const l of last.leaves) {
+      out.push({
+        id: `${roundTag}-left-${l.playerId}`,
+        tone: 'left',
+        text: `${nameOf(l.playerId)} has left the game — final score ${l.finalTotal}`,
+      });
+    }
     for (const j of last.joins) {
       out.push({
         id: `${roundTag}-join-${j.playerId}`,
@@ -58,6 +65,15 @@ function deriveCallouts(game: GameState): Callout[] {
         text: `${nameOf(j.playerId)} joined — seeded at ${j.seed}, no head start`,
       });
     }
+  }
+  // A departure is announced in the same voice as a join. Landing after the last
+  // recorded round is the COMMON case for one, so this is the usual path.
+  for (const l of game.pendingLeaves) {
+    out.push({
+      id: `pending-left-${l.playerId}`,
+      tone: 'left',
+      text: `${nameOf(l.playerId)} has left the game — final score ${l.finalTotal}`,
+    });
   }
   for (const j of game.pendingJoins) {
     out.push({

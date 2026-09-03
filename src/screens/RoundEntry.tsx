@@ -45,14 +45,17 @@ export function RoundEntry({ onDone }: RoundEntryProps) {
   // Which player's field the number pad is currently editing.
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
-  // Active players for THIS round, in seat order. Pending mid-game joiners are
-  // active from the next round, so include them.
+  // Active players for THIS round, in seat order.
+  //
+  // `activePlayerIds` alone is the whole answer, and deliberately so. It used to
+  // be unioned with `pendingJoins`, which was redundant — a pending joiner is
+  // seeded before the engine's final active list is taken, so they are already
+  // in it — and became a hazard once players could LEAVE: a second route into
+  // this list is a second route by which a departed player could be asked for a
+  // hand total the engine would then reject.
   const activeRows = useMemo(() => {
     if (game === null) return [];
-    const activeSet = new Set([
-      ...game.activePlayerIds,
-      ...game.pendingJoins.map((j) => j.playerId),
-    ]);
+    const activeSet = new Set(game.activePlayerIds);
     return game.standings.filter((s) => activeSet.has(s.playerId));
   }, [game]);
 
