@@ -354,7 +354,12 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     // the totals — which is what keeps them correct after an undo or an edit.
     if (outcome === 'YANIV') {
       successfulYaniv.set(callerId, (successfulYaniv.get(callerId) ?? 0) + 1);
-    } else {
+    } else if (outcome === 'ASSAF') {
+      // Named explicitly rather than left as a bare `else`, to match the line
+      // above. Today the outcome is one of exactly two, so the two forms behave
+      // identically — but a third outcome would silently be counted as an Assaf
+      // and appear in red on the final screen against a player it never
+      // happened to.
       caughtAssaf.set(callerId, (caughtAssaf.get(callerId) ?? 0) + 1);
     }
 
