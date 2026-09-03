@@ -23,6 +23,10 @@
  *   --accent             primary action / active starter ring
  *   --accent-ink         text/icon on an accent surface
  *   --accent-soft        a soft accent wash (selected fields, highlights)
+ *   --outcome-assaf-text / --outcome-yaniv-text
+ *                        the WORDS "Assaf" (red) and "Yaniv" (green), as text
+ *   --outcome-assaf-text-soft / --outcome-yaniv-text-soft
+ *                        the same two words where they sit on --accent-soft
  *   --danger             Assaf / destructive (warm red)
  *   --danger-ink         text on danger
  *   --danger-edge        border on a destructive button — per-theme, because the
@@ -86,6 +90,16 @@
        --outcome-yaniv-text  #8cefb0  -> 5.26:1 (clears 4.5:1 AA small text) */
   --outcome-assaf-text: #ffc1b8; /* light salmon-red — "Assaf" word on felt */
   --outcome-yaniv-text: #8cefb0; /* bright mint-green — "Yaniv" word on felt */
+  /* The SAME two words on the --accent-soft wash, which is the background of the
+     winner's row in the final-standings table. The pair above is measured on the
+     raised felt cell and does NOT survive the lighter wash — #ffc1b8 falls to
+     3.76:1 there and #8cefb0 to 4.18:1, both under the 4.5:1 AA floor for small
+     text — so the wash gets its own slightly lighter pair. Measured on
+     --accent-soft #3a6f5c:
+       --outcome-assaf-text-soft  #ffe0da  -> 4.69:1
+       --outcome-yaniv-text-soft  #b8f8d0  -> 4.82:1 */
+  --outcome-assaf-text-soft: #ffe0da;
+  --outcome-yaniv-text-soft: #b8f8d0;
   --border: #356351; /* felt border */
   --border-strong: #4d7a68;
   --focus-ring: #f4ecd8; /* ivory ring reads on the dark felt */
@@ -154,6 +168,14 @@
        --outcome-yaniv-text  #0f7a37  -> 5.35:1 (clears 4.5:1 AA small text) */
   --outcome-assaf-text: #c1352a; /* true red — "Assaf" word on light surface */
   --outcome-yaniv-text: #0f7a37; /* true green — "Yaniv" word on light surface */
+  /* Same story as Theme A: on the winner's row the table cell sits on the
+     --accent-soft grape wash, where the pair above measures 4.48:1 and 4.42:1 —
+     just under the 4.5:1 AA floor. Darkened a step for that background.
+     Measured on --accent-soft #ece4fb:
+       --outcome-assaf-text-soft  #a82a20  -> 5.65:1
+       --outcome-yaniv-text-soft  #0c6a2f  -> 5.47:1 */
+  --outcome-assaf-text-soft: #a82a20;
+  --outcome-yaniv-text-soft: #0c6a2f;
   --border: #e6ddcf;
   --border-strong: #d3c8b6;
   --focus-ring: #7c5ccb; /* grape ring reads on the light surface */

@@ -42,10 +42,67 @@
   margin-bottom: 12px;
 }
 
-.end__yaniv-count {
+/* The "Yaniv!" column: the combined number of calls, then the split beneath it.
+ *
+ * WIDTH. This is a phone-first table and the column has to survive a 320px
+ * screen, where the app frame leaves 288px and the four columns' padding takes
+ * 80px of that — 208px of content between them. The widest thing this column
+ * ever draws is one split line ("3 Assaf"), about 46px of text, so 66px of
+ * column including padding. That leaves roughly 145px for the player's name once
+ * the rank and score columns are paid for. The two split lines are laid out as a
+ * wrapping flex row rather than fixed lines, so they stack on a narrow phone and
+ * sit side by side on a wide one — no fixed width is invented anywhere.
+ *
+ * COLOUR IS NEVER THE ONLY CARRIER. Each part is the outcome WORD plus its
+ * colour, which is the app's settled marker convention ("Assaf" red, "Yaniv"
+ * green) — the same treatment the scoresheet uses. Read with no colour at all,
+ * the words still say which is which.
+ */
+.end__yaniv-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.end__yaniv-total {
+  line-height: 1.15;
+}
+
+.end__yaniv-split {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0 6px;
+}
+
+/* Small, tight, and allowed to wrap inside itself on the narrowest phones —
+   same reasoning as the scoresheet's outcome words. */
+.end__yaniv-part {
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  margin-left: 6px;
-  color: var(--ink-muted);
+}
+
+.end__yaniv-part--yaniv {
+  color: var(--outcome-yaniv-text);
+}
+
+.end__yaniv-part--assaf {
+  color: var(--outcome-assaf-text);
+}
+
+/* The winner's row is washed with --accent-soft, where the two outcome colours
+   above fall below the 4.5:1 AA floor for small text. Both themes define a pair
+   measured against that wash — see the notes in tokens.css. */
+.standings-table tr[data-leader='true'] .end__yaniv-part--yaniv {
+  color: var(--outcome-yaniv-text-soft);
+}
+
+.standings-table tr[data-leader='true'] .end__yaniv-part--assaf {
+  color: var(--outcome-assaf-text-soft);
 }
 
 .end__stat {

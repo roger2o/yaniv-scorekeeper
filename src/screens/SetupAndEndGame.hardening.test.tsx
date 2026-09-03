@@ -222,11 +222,18 @@ describe('EndGameScreen — manual end crowns the lowest cumulative', () => {
       ],
       manualEnd: true,
     });
-    expect(screen.getByText(/Most “Yaniv!” calls: Bo \(2\)/)).toBeTruthy();
-    // Bo's row carries the count "2".
+    // The stat line stays SUCCESSFUL-only, and says so, because it reads as an
+    // achievement rather than a count of attempts.
+    expect(
+      screen.getByText(/Most successful “Yaniv!” calls: Bo \(2\)/),
+    ).toBeTruthy();
+    // Bo's row carries the combined count "2" — both calls succeeded, so the
+    // total and the successful count coincide here.
     const table = screen.getByRole('table');
     const boRow = within(table).getByText('Bo').closest('tr')!;
     expect(within(boRow).getByText('2')).toBeTruthy();
+    expect(within(boRow).getByText('2 Yaniv')).toBeTruthy();
+    expect(within(boRow).getByText('2 Yaniv calls, all successful')).toBeTruthy();
   });
 });
 

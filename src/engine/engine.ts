@@ -181,6 +181,7 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
   const totals = new Map<string, number>();
   const eliminated = new Set<string>();
   const successfulYaniv = new Map<string, number>();
+  const caughtAssaf = new Map<string, number>();
   // [MID-GAME JOIN] A player is only ACTIVE once they have JOINED. Original
   // players (join index 0) are joined from the start; mid-game joiners are
   // added to this set when the replay reaches their join round, at which point
@@ -189,6 +190,7 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
   for (const p of seatOrder) {
     totals.set(p.id, 0);
     successfulYaniv.set(p.id, 0);
+    caughtAssaf.set(p.id, 0);
     if ((p.joinsBeforeRoundIndex ?? 0) === 0) joined.add(p.id);
   }
 
@@ -345,9 +347,15 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
       }
     }
 
-    // --- Successful-Yaniv count [RULE 7] ---
+    // --- Per-caller call counts [RULE 7] ---
+    // Two counts, both keyed on the CALLER and on this round's outcome, so the
+    // pair always sums to the number of times this player called "Yaniv!". Both
+    // are derived here on every replay and neither is ever stored, exactly like
+    // the totals — which is what keeps them correct after an undo or an edit.
     if (outcome === 'YANIV') {
       successfulYaniv.set(callerId, (successfulYaniv.get(callerId) ?? 0) + 1);
+    } else {
+      caughtAssaf.set(callerId, (caughtAssaf.get(callerId) ?? 0) + 1);
     }
 
     // --- Snapshot cumulative totals after this round ---
@@ -407,6 +415,7 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     total: totals.get(p.id)!,
     eliminated: eliminated.has(p.id),
     successfulYanivCount: successfulYaniv.get(p.id)!,
+    caughtAssafCount: caughtAssaf.get(p.id)!,
   }));
 
   // --- Winner / game-over resolution ---

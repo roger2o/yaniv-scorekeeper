@@ -4,8 +4,9 @@
  * Design principle (locked decision, PROJECT.md 2026-06-02):
  * the ordered round-history list is the SINGLE SOURCE OF TRUTH. Cumulative
  * totals, halving callouts, eliminations, who-starts-next, and the per-player
- * successful-Yaniv count are ALL derived by recomputing from history. Nothing
- * is ever patched in place. This is what makes undo/edit safe.
+ * counts of successful Yanivs and of Yanivs caught in an Assaf are ALL derived
+ * by recomputing from history. Nothing is ever patched in place. This is what
+ * makes undo/edit safe.
  */
 
 /** Yaniv call threshold — gates whether a Yaniv may be CALLED, nothing else. */
@@ -155,6 +156,17 @@ export interface StandingRow {
   eliminated: boolean;
   /** Number of rounds this player called that resolved as a successful Yaniv. */
   successfulYanivCount: number;
+  /**
+   * Number of rounds this player CALLED that resolved as an ASSAF — i.e. they
+   * called "Yaniv!" and were caught. Counted against the CALLER only; a player
+   * who did the catching is not counted here.
+   *
+   * Sibling to `successfulYanivCount`: the two together are the number of times
+   * this player called "Yaniv!" at all, which is what the end screen shows as
+   * the combined total. Derived on every recompute like everything else, never
+   * stored, so it stays correct through an undo or an edit.
+   */
+  caughtAssafCount: number;
 }
 
 /** The complete, fully-derived game state produced by `recompute`. */

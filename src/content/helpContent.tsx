@@ -178,9 +178,18 @@ export function HowToUse() {
         </p>
         <p>
           The end screen also shows a fun stat:{' '}
-          <strong>how many times each player successfully called “Yaniv!”</strong>{' '}
-          during this game. It’s just for this game — the app doesn’t keep
-          history between games.
+          <strong>how many times each player called “Yaniv!”</strong> during this
+          game. The big number is every call they made, and underneath it the
+          split — how many came off (<strong>Yaniv</strong>, in green) and how
+          many got caught (<strong>Assaf</strong>, in red). So 6 that worked and
+          2 that didn’t shows as <strong>8</strong>, with “6 Yaniv” and “2 Assaf”
+          below it.
+        </p>
+        <p>
+          The line under the table, <strong>most successful “Yaniv!” calls</strong>
+          , counts only the ones that came off — it’s the bragging-rights stat, so
+          getting caught doesn’t help you win it. All of this is just for this
+          game; the app doesn’t keep history between games.
         </p>
       </section>
 

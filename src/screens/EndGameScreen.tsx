@@ -5,9 +5,23 @@
  * cumulative total), OR the engine auto-ends when one player survives an
  * elimination game (the engine's winnerId). Final standings are a semantic
  * <table>, sorted LOWEST-FIRST (this is a final result screen, not the live
- * scoreboard — reordering is fine here). Each player's count of successful
- * "Yaniv!" calls is shown — the per-game stat — as a number plus stars (never
- * count-by-shape-alone).
+ * scoreboard — reordering is fine here).
+ *
+ * THE "Yaniv!" COLUMN IS THE COMBINED CALL COUNT. It leads with the total number
+ * of times the player called "Yaniv!" — successful calls plus calls that were
+ * caught in an Assaf — and then breaks that total down underneath, one line per
+ * outcome that actually happened, in the app's settled marker language: the WORD
+ * "Yaniv" in green and the WORD "Assaf" in red, so the split reads without
+ * relying on colour. A player with nothing but successes shows one line; a
+ * player who never called shows the bare total and nothing else.
+ *
+ * THE STARS ARE GONE, and that was a width decision rather than a taste one. The
+ * column previously drew one ★ per successful call beside the number. A combined
+ * total is by definition larger, and a run of eight stars plus a two-part split
+ * cannot share a phone-width column: on a 320px screen the four columns have
+ * about 208px of content width between them, and the split alone needs about 66
+ * of it. The words carry the same information in less space and say more, since
+ * a star could never have distinguished a success from an Assaf.
  *
  * Theme B (Party Arcade) shows a celebratory confetti burst on entry, gated
  * behind prefers-reduced-motion. Rematch restarts with the same players and
@@ -22,6 +36,28 @@ import { makePlayerId, seatColorVar, seatShape } from './seat';
 import { Confetti } from './Confetti';
 import { ConfirmDialog } from './ConfirmDialog';
 import './EndGameScreen.css';
+
+/**
+ * What a screen reader is given for the "Yaniv!" cell. The visible cell is a
+ * stack of numbers and one-word labels, which reads as a string of loose
+ * fragments; this is the same fact as one sentence. Phrased four ways so the
+ * common cases do not come out as "0 Yaniv calls: 0 successful, 0 caught".
+ */
+function yanivCallSummary(successful: number, caughtInAssaf: number): string {
+  const total = successful + caughtInAssaf;
+  if (total === 0) return 'No Yaniv calls';
+  const calls = total === 1 ? '1 Yaniv call' : `${total} Yaniv calls`;
+  // "all successful" reads oddly of a single call, hence the two singular forms.
+  if (caughtInAssaf === 0) {
+    return total === 1 ? `${calls}, successful` : `${calls}, all successful`;
+  }
+  if (successful === 0) {
+    return total === 1
+      ? `${calls}, caught in an Assaf`
+      : `${calls}, all caught in an Assaf`;
+  }
+  return `${calls}: ${successful} successful, ${caughtInAssaf} caught in an Assaf`;
+}
 
 export function EndGameScreen() {
   const { game, state, resetGame, startGame, setRingOrder } = useStore();
@@ -84,7 +120,17 @@ export function EndGameScreen() {
   // scoreboard — reordering is fine here).
   const sorted = [...game.standings].sort((a, b) => a.total - b.total);
 
-  // The per-game stat: who called the most successful Yanivs.
+  // The per-game stat: who called the most SUCCESSFUL Yanivs.
+  //
+  // Deliberately NOT the combined total that the table column now shows, even
+  // though that makes the line and the column report different numbers for the
+  // same player. This line reads as an achievement — being the player who called
+  // it and got away with it most often — and folding in the calls that were
+  // caught would let it be won by whoever gambled most recklessly. Combined
+  // totals are a count of attempts; this is a count of wins. The label says
+  // "successful" so the two numbers on screen cannot be mistaken for the same
+  // measure. Roger's to overturn: making it the combined total is a one-word
+  // change here and one in the label.
   const mostYaniv =
     game.standings.length > 0
       ? [...game.standings].sort(
@@ -180,9 +226,33 @@ export function EndGameScreen() {
                 {row.playerId === winnerId && <span aria-hidden="true"> 👑</span>}
               </td>
               <td className="num">{row.total}</td>
-              <td className="num">
-                <span aria-hidden="true">{'★'.repeat(row.successfulYanivCount)}</span>
-                <span className="end__yaniv-count">{row.successfulYanivCount}</span>
+              {/* The visible stack is hidden from assistive tech and replaced by
+                  one sentence, because read out as it stands it is a run of
+                  disconnected fragments ("8", "5 Yaniv", "3 Assaf") that never
+                  says they are parts of one figure. */}
+              <td className="num end__yaniv">
+                <span aria-hidden="true" className="end__yaniv-stack">
+                  <span className="end__yaniv-total tabular">
+                    {row.successfulYanivCount + row.caughtAssafCount}
+                  </span>
+                  {(row.successfulYanivCount > 0 || row.caughtAssafCount > 0) && (
+                    <span className="end__yaniv-split">
+                      {row.successfulYanivCount > 0 && (
+                        <span className="end__yaniv-part end__yaniv-part--yaniv">
+                          {`${row.successfulYanivCount} Yaniv`}
+                        </span>
+                      )}
+                      {row.caughtAssafCount > 0 && (
+                        <span className="end__yaniv-part end__yaniv-part--assaf">
+                          {`${row.caughtAssafCount} Assaf`}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </span>
+                <span className="sr-only">
+                  {yanivCallSummary(row.successfulYanivCount, row.caughtAssafCount)}
+                </span>
               </td>
             </tr>
           ))}
@@ -191,7 +261,8 @@ export function EndGameScreen() {
 
       {mostYaniv && mostYaniv.successfulYanivCount > 0 && (
         <p className="end__stat">
-          Most “Yaniv!” calls: {mostYaniv.name} ({mostYaniv.successfulYanivCount})
+          Most successful “Yaniv!” calls: {mostYaniv.name} (
+          {mostYaniv.successfulYanivCount})
         </p>
       )}
 
