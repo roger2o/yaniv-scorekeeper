@@ -1,22 +1,35 @@
 /*
- * Keep-screen-awake toggle. Shaped to match the "?" Help button it sits beside
- * (56px round, same glyph size) so the top-bar cluster reads as one set of
+ * Keep-screen-on toggle. Shaped to match the "?" Help button it sits beside
+ * (56px round, same 24px glyph box) so the top-bar cluster reads as one set of
  * controls. Press feedback, focus ring and hover-gating all inherit from
  * floor.css. Token-driven, so it skins correctly in both themes.
  *
- * WCAG 1.4.11 (a control's own boundary >= 3:1 against its background) and 1.4.3
- * (text >= 4.5:1), measured per state against the PAGE surface each theme uses,
- * Felt / Arcade:
+ * THE GLYPH IS AN INLINE SVG DRAWN IN `currentColor` (AwakeGlyph.tsx), so every
+ * figure below is a colour that genuinely paints. That was not true before: the
+ * two bulb/sleep glyphs were colour emoji (`Emoji_Presentation=Yes`), which the
+ * platform draws in its own colours whatever CSS says, so four of the nine
+ * figures this comment used to quote described nothing. See AwakeGlyph.tsx for
+ * the check.
  *
- *   on          fill --accent, edge --accent   4.12 / 4.59 (boundary)
- *               glyph --accent-ink on --accent 6.81 / 4.86 (text)
- *   off         edge --ink-muted               6.75 / 5.72 (boundary)
- *               glyph --ink on --surface-raised 6.22 / 15.93 (text)
- *   blocked     amber fill --warn              5.10 / 1.52 (boundary)
- *               edge --warn-border             1.01 / 4.43 (boundary)
- *               glyph --warn-ink on --warn     8.42 / 9.87 (text)
- *   unsupported edge --ink-muted (dashed)      6.75 / 5.72 (boundary)
- *               glyph --ink-muted on surface   6.75 / 5.72 (text)
+ * WCAG 1.4.11 (a control's own boundary, and a graphical object carrying
+ * meaning, >= 3:1 against its background) and 1.4.3 (text >= 4.5:1). The glyph
+ * is a graphical object rather than text, so 3:1 is its formal bar — but it is
+ * the SOLE carrier of this control's state, so every state is held to the 4.5:1
+ * text bar anyway, and all of them clear it. Measured per state against the PAGE
+ * surface each theme uses (Felt / Arcade), with the calculator in this repo's
+ * review notes rather than by eye:
+ *
+ *   on          fill --accent, edge --accent    4.12 / 4.59 (boundary)
+ *               glyph --accent-ink on --accent  6.81 / 4.86 (graphic + text bar)
+ *   waiting     edge --accent                   4.12 / 4.59 (boundary)
+ *               glyph --ink on --surface-raised 6.22 / 15.93
+ *   off         edge --ink-muted                6.75 / 5.72 (boundary)
+ *               glyph --ink on --surface-raised 6.22 / 15.93
+ *   blocked     amber fill --warn               5.10 / 1.52 (boundary)
+ *               edge --warn-border              1.01 / 4.43 (boundary)
+ *               glyph --warn-ink on --warn      8.42 / 9.87
+ *   unsupported edge --ink-muted (dashed)       6.75 / 5.72 (boundary)
+ *               glyph --ink-muted on surface    6.75 / 5.72
  *
  * The `blocked` row is the one that needs reading twice: on Felt the amber FILL
  * delineates the button (5.10) and the deep-brown edge is decorative (1.01), while
@@ -24,10 +37,19 @@
  * (4.43). That is the same per-theme split the install warning already relies on,
  * for the same reason — see the --warn notes in tokens.css.
  *
- * The `off` edge deliberately uses --ink-muted rather than the --border-strong the
- * Help button uses. --border-strong measures only 2.04 / 1.54 against the page
- * surface, i.e. under the 3:1 non-text bar; --ink-muted is the token the app's
- * other unfilled control (.btn--ghost) already borrows for exactly this reason.
+ * The `off` and `unsupported` edges deliberately use --ink-muted rather than the
+ * --border-strong the Help button uses. --border-strong measures only 2.04 / 1.54
+ * against the page surface, i.e. under the 3:1 non-text bar; --ink-muted is the
+ * token the app's other unfilled control (.btn--ghost) already borrows for
+ * exactly this reason.
+ *
+ * WAITING vs OFF — WHY THE EDGE AND THE FILL SAY DIFFERENT THINGS. `waiting`
+ * means the scorekeeper has this switched ON and the phone is not holding it at
+ * this moment (it is asked for again about a second later). So the BORDER carries
+ * the intent — accent, same as `on` — while the hollow, unlit bulb carries the
+ * reality. `off` is the opposite: a quiet grey edge and a moon, because nothing
+ * is wanted and nothing is happening. Neither state relies on that difference
+ * alone: the shapes differ (unlit bulb vs moon) and so do the accessible names.
  */
 .awake-toggle {
   display: inline-flex;
@@ -39,13 +61,19 @@
   background: var(--surface-raised);
   color: var(--ink);
   border: 2px solid var(--ink-muted);
-  font-size: 1.5rem;
   line-height: 1;
 }
 
 .awake-toggle[data-state='on'] {
   background: var(--accent);
   color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+/* Wanted, but not in hand this moment. See the note above. */
+.awake-toggle[data-state='waiting'] {
+  background: var(--surface-raised);
+  color: var(--ink);
   border-color: var(--accent);
 }
 
@@ -58,8 +86,12 @@
 /* Unavailable on this phone. NOT `opacity`, which is how the app dims a
    genuinely disabled control: dimming text is already a measured contrast
    failure elsewhere in this app, and this state has to stay legible because it
-   is carrying information. A dashed edge plus the struck-through glyph below
-   says "not available" by shape, so the meaning survives without colour. */
+   is carrying information. A dashed edge plus the struck-through glyph says
+   "not available" by shape, so the meaning survives without colour.
+
+   The strike-through used to be a CSS pseudo-element laid over the emoji; it is
+   now part of the drawing (AwakeGlyph.tsx), which is the only way it can be
+   guaranteed to line up with the shape it crosses. */
 .awake-toggle[data-state='unsupported'] {
   background: transparent;
   color: var(--ink-muted);
@@ -67,23 +99,7 @@
   cursor: not-allowed;
 }
 
-.awake-toggle[data-state='unsupported'] .awake-toggle__glyph {
-  position: relative;
-}
-
-/* The "no" stroke across the glyph — the non-colour cue for unavailable. */
-.awake-toggle[data-state='unsupported'] .awake-toggle__glyph::after {
-  content: '';
-  position: absolute;
-  left: -3px;
-  right: -3px;
-  top: 50%;
-  height: 2px;
-  background: currentColor;
-  transform: rotate(-45deg);
-}
-
 .awake-toggle__glyph {
-  display: inline-block;
+  display: inline-flex;
   line-height: 1;
 }

@@ -210,18 +210,22 @@ export function HowToUse() {
           The round button with the <strong>light bulb</strong> keeps your phone’s
           screen on the whole time the app is open, so it doesn’t lock while a
           hand is being played and you don’t have to unlock it every round. It
-          starts <strong>on</strong>. Tap it once and the bulb becomes{' '}
-          <strong>sleep marks</strong> — the phone then sleeps normally, which
-          saves battery.
+          starts <strong>on</strong>. Tap it once and the bulb becomes a{' '}
+          <strong>moon</strong> — the phone then sleeps normally, which saves
+          battery.
         </p>
         <p>
           Like the theme, it’s a per-phone preference and it never affects
-          anyone’s scores. Two things you might see: the button shows a{' '}
-          <strong>warning mark</strong> if your phone refuses to keep the screen
-          on (battery saver usually does this), and it shows as{' '}
-          <strong>crossed out</strong> on the few phones and browsers that can’t
-          do it at all — older iPhones especially. In both cases the screen just
-          behaves normally.
+          anyone’s scores. Three things you might see. If your phone{' '}
+          <strong>refuses</strong> to keep the screen on — battery saver usually
+          does this — the button shows a <strong>warning triangle</strong>, and
+          the app keeps asking every so often, so it clears itself once the phone
+          allows it again. If your phone <strong>takes it back</strong> part-way
+          through a game, the bulb goes <strong>hollow</strong> for a second while
+          the app asks again. And on the few phones and browsers that can’t do it
+          at all — older iPhones especially — the bulb shows{' '}
+          <strong>crossed out</strong>, and tapping it explains why. In every case
+          the screen just behaves normally.
         </p>
       </section>
     </div>
