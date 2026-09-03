@@ -230,7 +230,7 @@ export function EndGameScreen() {
                   one sentence, because read out as it stands it is a run of
                   disconnected fragments ("8", "5 Yaniv", "3 Assaf") that never
                   says they are parts of one figure. */}
-              <td className="num end__yaniv">
+              <td className="num">
                 <span aria-hidden="true" className="end__yaniv-stack">
                   <span className="end__yaniv-total tabular">
                     {row.successfulYanivCount + row.caughtAssafCount}
