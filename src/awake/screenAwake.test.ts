@@ -176,17 +176,31 @@ describe('keep-screen-awake preference', () => {
   });
 
   it('a storage that refuses to write still leaves the toggle working', async () => {
-    installWakeLock();
-    const setItem = vi
-      .spyOn(window.localStorage, 'setItem')
-      .mockImplementation(() => {
-        throw new DOMException('quota', 'QuotaExceededError');
-      });
+    const { sentinels } = installWakeLock();
+    // ⚠ PATCHED ON `Storage.prototype`, NOT on `window.localStorage`, and that is
+    // not a style choice. jsdom's `localStorage` is a Proxy, so
+    // `vi.spyOn(window.localStorage, 'setItem')` silently does nothing there:
+    // measured directly, it records ZERO calls, throws nothing, and the real
+    // write still happens. This test was written that way and therefore proved
+    // only that a storage which never fails does not break anything. The stress
+    // suite's storage tests already patch the prototype, for this reason.
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('quota', 'QuotaExceededError');
+    });
     startScreenAwake();
     await settle();
+    expect(sentinels[0]!.released).toBe(false);
 
     expect(() => setScreenAwakePreference(false)).not.toThrow();
+    await settle();
+
     expect(getScreenAwakeState().preferOn).toBe(false);
+    // The part that actually matters, and that the old version could not see:
+    // persisting and reconciling the lock are two steps of one action. If the
+    // failed write escaped, the second step would be skipped and the phone would
+    // go on being held awake with the button reading "off".
+    expect(getScreenAwakeState().held).toBe(false);
+    expect(sentinels[0]!.released).toBe(true);
     setItem.mockRestore();
   });
 });

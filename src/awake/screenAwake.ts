@@ -2,10 +2,11 @@
  * KEEP-THE-SCREEN-AWAKE controller — the persisted, per-device preference plus
  * the actual Screen Wake Lock it stands for.
  *
- * WHY THIS EXISTS. A game of Yaniv has long gaps between rounds: cards get
- * dealt at the table (by hand — this app never deals), a hand gets played out,
- * and only then does the scorekeeper touch the phone again. On a default phone
- * that is easily long enough for the screen to lock, so the scorekeeper unlocks
+ * WHY THIS EXISTS. A game of Yaniv has long gaps between rounds: cards are
+ * handed out at the table by hand (this app never touches the cards), a hand
+ * gets played out, and only then does the scorekeeper touch the phone again. On
+ * a default phone that is easily long enough for the screen to lock, so the
+ * scorekeeper unlocks
  * the phone every single round. Holding a screen wake lock while the app is
  * open removes that. It is ON by default because the scorekeeping loop is the
  * app's whole job; it is switchable OFF because a locked-on screen costs
@@ -28,15 +29,23 @@
  *  2. `sync()` is the ONLY function that requests or releases a lock. It is
  *     idempotent: calling it repeatedly with nothing changed does nothing.
  *  3. At most one sentinel is held at a time, and at most one request is in
- *     flight (`requesting`).
+ *     flight (`requesting`). The `release` listener is attached per lock and
+ *     checks its own identity before acting, so a stale lock's late event can
+ *     never clear the reference to the live one.
  *  4. Every call into the browser API is inside try/catch. A rejection updates
  *     the published state and is never allowed to propagate; nothing here can
  *     crash a screen or leave the UI claiming a lock it does not hold.
- *  5. The `visibilitychange` listener is registered exactly once, by `start()`,
- *     and is never removed — the page's lifetime IS this module's lifetime.
+ *  5. The `visibilitychange` listener is registered exactly once, by `start()`.
+ *     Nothing in the application ever removes it — the page's lifetime IS this
+ *     module's lifetime — and the ONLY thing that does is the test-only reset at
+ *     the bottom of this file, so each test starts from a clean document.
  *  6. `getState()` returns a CACHED object whose identity changes only when a
  *     field changed. `useSyncExternalStore` requires that; returning a fresh
  *     object each call would loop React forever.
+ *  7. A lock lost or refused while the app is in front is asked for again on a
+ *     BACKING-OFF timer, never in a tight loop, and at most one retry is ever
+ *     pending. A phone that keeps taking the lock back therefore costs one
+ *     request an ever-longer interval apart instead of a request storm.
  *
  * THE FAILURE MODE THIS FILE EXISTS TO PREVENT. The browser silently RELEASES a
  * screen wake lock whenever the document becomes hidden — backgrounding the
@@ -46,6 +55,16 @@
  * feature would work exactly once per app launch and then quietly stop, which
  * is the kind of silent failure this project treats as unacceptable. Rule 5's
  * listener is the whole feature, not a nicety.
+ *
+ * AND THE SAME THING HAPPENS WITHOUT THE APP EVER LEAVING THE FRONT. A phone's
+ * power manager may take the lock back mid-game while the app is plainly visible
+ * — battery saver is the case to expect — and it announces that the same silent
+ * way. `visibilitychange` cannot help there, because nothing changed visibility:
+ * the scorekeeper is looking at the app. So the release handler asks again on a
+ * backing-off timer (invariant 7), and the control shows the honest not-holding
+ * state in the meantime rather than a confident lit bulb. Those two halves are
+ * one fix: without the retry the feature dies, and without the honest display
+ * nobody would ever know it had.
  */
 
 /** Separate from the game-data key on purpose — see the theme's note too. */
@@ -125,6 +144,60 @@ let sentinel: WakeLockSentinel | null = null;
 let requesting = false;
 const subscribers = new Set<() => void>();
 
+/**
+ * RETRY (invariant 7). The delays are a judgement call, not a measurement, and
+ * they are chosen from the two costs either side:
+ *
+ *  - Waiting too long costs a window in which the screen can lock between
+ *    rounds. A phone's own screen timeout is 15–30 seconds, so a first retry a
+ *    second later is invisible to the scorekeeper.
+ *  - Retrying immediately costs a request storm. If a power manager grants the
+ *    lock and takes it straight back, an immediate retry from inside the
+ *    release handler is an unbounded loop that would freeze the page. Doubling
+ *    the wait each time bounds it: a phone that keeps revoking settles at one
+ *    request a minute, which is the same order as the phone's own decisions.
+ *
+ * The backoff starts over whenever the app comes back to the front, whenever the
+ * user switches the preference on, and whenever the lock we just lost had been
+ * held long enough to count as healthy — so a rough patch early in a game does
+ * not leave the app patient for the rest of the evening.
+ */
+const RETRY_FIRST_MS = 1_000;
+const RETRY_MAX_MS = 60_000;
+const RETRY_HEALTHY_HOLD_MS = 30_000;
+
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryDelayMs = RETRY_FIRST_MS;
+/** When the lock we currently hold (or last held) was granted. */
+let grantedAtMs = 0;
+
+function cancelRetry(): void {
+  if (retryTimer !== null) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+}
+
+/** Start the backoff over. Called when something changed for the better. */
+function resetRetryBackoff(): void {
+  retryDelayMs = RETRY_FIRST_MS;
+}
+
+/** Ask again later. At most one retry is pending at any moment (invariant 7). */
+function scheduleRetry(): void {
+  if (retryTimer !== null) return;
+  if (!state.supported || !state.preferOn) return;
+  // Asking while the page is hidden is refused by design, and the
+  // visibilitychange listener already covers the return. Don't burn a step.
+  if (document.visibilityState !== 'visible') return;
+  const delay = retryDelayMs;
+  retryDelayMs = Math.min(retryDelayMs * 2, RETRY_MAX_MS);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    sync();
+  }, delay);
+}
+
 function publish(next: Partial<ScreenAwakeState>): void {
   const merged: ScreenAwakeState = { ...state, ...next };
   // Invariant 6: only mint a new object when something actually changed.
@@ -180,23 +253,47 @@ async function requestLock(): Promise<void> {
       return;
     }
     sentinel = granted;
+    grantedAtMs = Date.now();
     // The browser fires this when it takes the lock back — on hide, on a system
     // decision, or on our own release(). It is how `held` stays honest.
-    granted.addEventListener('release', onSentinelRelease);
+    //
+    // THE LISTENER IS BOUND TO THIS PARTICULAR LOCK, and that is the whole
+    // point. A real release event arrives on a LATER task than the release()
+    // that caused it, so on a fast off-then-on the previous lock's event lands
+    // after the replacement has already been stored. A handler that just
+    // cleared `sentinel` would then orphan the live lock: nothing could release
+    // it, the screen would never sleep again for the life of the page, and the
+    // button would read "off" throughout. Passing the lock in lets the handler
+    // check whether the event is even about the lock we hold (invariant 3).
+    granted.addEventListener('release', () => onSentinelRelease(granted));
     publish({ held: true, blocked: false });
   } catch {
     // Rejected (invariant 4). Most often: the document lost visibility mid-flight,
     // or a battery saver refused. Report it rather than claim a lock we lack.
     sentinel = null;
     publish({ held: false, blocked: true });
+    // And ask again later. Without this a phone that refused once — on low
+    // battery, say — keeps the warning up until the app happens to be
+    // backgrounded and reopened, even after it has been put on charge.
+    scheduleRetry();
   } finally {
     requesting = false;
   }
 }
 
-function onSentinelRelease(): void {
+/**
+ * The browser has ended a lock. `which` is the lock the event was registered
+ * for; anything that is not the one we currently hold is a stale lock's late
+ * event and must be ignored (invariant 3).
+ */
+function onSentinelRelease(which: WakeLockSentinel): void {
+  if (which !== sentinel) return;
   sentinel = null;
   publish({ held: false });
+  // A lock that lasted a decent while and then ended is an ordinary system
+  // decision, not a phone fighting us — so be as impatient as the first time.
+  if (Date.now() - grantedAtMs >= RETRY_HEALTHY_HOLD_MS) resetRetryBackoff();
+  scheduleRetry();
 }
 
 /**
@@ -217,6 +314,12 @@ function onVisibilityChange(): void {
   // THE POINT OF THE WHOLE FILE: the lock we held before the page was hidden is
   // gone, silently. Ask for it again. (`sync` is a no-op if we somehow still
   // hold one, or if the preference is off.)
+  //
+  // Coming back to the app is also the moment to stop being patient: whatever
+  // made the phone refuse or revoke may well be over, so the backoff starts
+  // again from its shortest wait and any pending retry gives way to asking now.
+  resetRetryBackoff();
+  cancelRetry();
   sync();
 }
 
@@ -242,8 +345,17 @@ export function setScreenAwakePreference(preferOn: boolean): void {
   // Turning it off clears any earlier refusal: there is nothing to be blocked
   // from once we have stopped asking.
   publish({ preferOn, blocked: preferOn ? state.blocked : false });
-  persistPreference(preferOn);
+  // A pending retry belongs to the OLD intent either way: switching off must not
+  // leave one armed, and switching on should ask now rather than in a minute.
+  cancelRetry();
+  resetRetryBackoff();
+  // Deliberately BEFORE `sync()`. Writing the preference can throw on a phone
+  // whose storage is full or blocked, and it is caught inside
+  // `persistPreference`, but ordering it first would still be a trap: any future
+  // change that let a throw escape would skip the reconcile and leave the lock
+  // held with the label reading "off".
   sync();
+  persistPreference(preferOn);
 }
 
 /** Current published state. Stable identity while nothing changes. */
@@ -269,6 +381,9 @@ export function __resetScreenAwakeForTests(): void {
     document.removeEventListener('visibilitychange', onVisibilityChange);
     listenerAttached = false;
   }
+  cancelRetry();
+  resetRetryBackoff();
+  grantedAtMs = 0;
   initialised = false;
   sentinel = null;
   requesting = false;
