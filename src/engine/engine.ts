@@ -392,8 +392,18 @@ export function recompute(history: RoundEntry[], settings: GameSettings): GameSt
     if (settings.halvingEnabled) {
       for (const id of active) {
         const t = totals.get(id)!;
+        // The round must have MOVED this player's total onto the multiple of
+        // 100. A player parked on 100/200/300 after a prior halving who scores
+        // 0 has not LANDED on anything, and must not be halved again — that is
+        // the no-cascade rule leaking across rounds (Roger, 2026-09-09: reached
+        // 200, halved to 100, then a successful Yaniv halved him again to 50).
+        // roundScores is populated for every active player above, and the only
+        // OTHER writer of a total is the join seed (line ~287), which the seed
+        // exemption already excludes from halving. So "scored something" is a
+        // complete test for "moved" as long as that stays true.
+        const movedThisRound = roundScores[id] !== 0;
         // Exactly a positive multiple of 100. Halve ONCE, no cascade.
-        if (t > 0 && t % 100 === 0) {
+        if (movedThisRound && t > 0 && t % 100 === 0) {
           const halved = t / 2;
           totals.set(id, halved);
           halvings.push({ playerId: id, from: t, to: halved });

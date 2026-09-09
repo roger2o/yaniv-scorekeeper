@@ -275,16 +275,52 @@ describe('TEST-12..13d halving', () => {
   // TEST-13e (adversarial extra): a total that was ALREADY a multiple of 100
   // after a prior round's halving (e.g. 200->100) must NOT be re-halved on a
   // round where the player scores 0 (no change -> no new event).
+  //
+  // FIELD BUG, Roger, 2026-09-09: he reached 200, was correctly halved to 100,
+  // then called a successful Yaniv the next round and was halved AGAIN to 50.
+  //
+  // This test previously left Bob on 50 for its zero-gain round, so it never
+  // sat him on a multiple of 100 and passed with the defect present. It now
+  // parks him on an exact 100 first, which is the only shape that exercises it.
   it('TEST-13e a player sitting on 100 from a prior halving is not re-halved at 0 gain', () => {
     const s = settings();
     const history: RoundEntry[] = [
-      round('ann', { ann: 0, bob: 100, cara: 5 }), // bob 100 -> 50
-      round('ann', { ann: 0, bob: 50, cara: 5 }), // bob 50+50=100 -> 50 again
-      round('ann', { ann: 0, bob: 0, cara: 5 }), // bob unchanged at 50, no halving
+      round('ann', { ann: 0, bob: 200, cara: 5 }), // bob 200 -> halved to 100
+      round('bob', { ann: 9, bob: 1, cara: 9 }), // bob calls a successful Yaniv, scores 0
     ];
     const state = recompute(history, s);
-    expect(state.rounds[2]!.halvings).toEqual([]);
-    expect(totalOf(state, 'bob')).toBe(50);
+    expect(state.rounds[0]!.halvings).toEqual([{ playerId: 'bob', from: 200, to: 100 }]);
+    expect(state.rounds[1]!.outcome).toBe('YANIV');
+    expect(state.rounds[1]!.halvings).toEqual([]); // NOT re-halved
+    expect(totalOf(state, 'bob')).toBe(100); // NOT 50
+  });
+
+  // TEST-13e2: the same exemption for a player who scores 0 WITHOUT calling —
+  // a catcher with a zero hand in an Assaf round. Distinct code path from the
+  // caller, same requirement: no movement, no halving.
+  it('TEST-13e2 a non-caller scoring 0 while sitting on 100 is not re-halved', () => {
+    const s = settings();
+    const history: RoundEntry[] = [
+      round('ann', { ann: 0, bob: 200, cara: 5 }), // bob 200 -> halved to 100
+      round('ann', { ann: 5, bob: 0, cara: 9 }), // ann assaf-ed by bob; bob scores 0
+    ];
+    const state = recompute(history, s);
+    expect(state.rounds[1]!.outcome).toBe('ASSAF');
+    expect(state.rounds[1]!.halvings).toEqual([]);
+    expect(totalOf(state, 'bob')).toBe(100);
+  });
+
+  // TEST-13e3: the exemption must NOT swallow a genuine second landing. Parked
+  // on 100, Bob scores 100 -> lands on 200 -> halves to 100 again.
+  it('TEST-13e3 a player parked on 100 who genuinely lands on 200 still halves', () => {
+    const s = settings();
+    const history: RoundEntry[] = [
+      round('ann', { ann: 0, bob: 200, cara: 5 }), // bob 200 -> halved to 100
+      round('ann', { ann: 0, bob: 100, cara: 5 }), // bob 100+100=200 -> halved to 100
+    ];
+    const state = recompute(history, s);
+    expect(state.rounds[1]!.halvings).toEqual([{ playerId: 'bob', from: 200, to: 100 }]);
+    expect(totalOf(state, 'bob')).toBe(100);
   });
 });
 

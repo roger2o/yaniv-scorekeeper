@@ -345,6 +345,32 @@ describe('mid-game join — seed multiple of 100 with halving ON then a later ex
     expect(totalOf(seeded, 'cara')).toBe(100); // seed of exactly 100, NOT halved
     expect(seeded.rounds[0]!.halvings).toEqual([]); // no halving callout on the seed
   });
+
+  // The seed exemption (RULE 2 / PROJECT.md "no halving on the seed") only held
+  // as long as the joiner MOVED on the round they joined. With halving ON, a
+  // joiner scoring 0 on their first round used to be halved straight off their
+  // seed, because the halving pass asked only "is this total an exact hundred?"
+  // and never "did this round put you there?". Same defect as Roger's field bug
+  // of 2026-09-09 (200 -> 100, then a successful Yaniv halved him again).
+  it('a joiner seeded onto an exact 100 who scores 0 on their first round keeps the seed', () => {
+    const base = players(['Ann', 'Bob']);
+    const s = settings({
+      players: withJoiner(base, { id: 'cara', name: 'Cara', joinsBeforeRoundIndex: 1 }),
+      halvingEnabled: true,
+    });
+    const state = recompute(
+      [
+        round('ann', { ann: 0, bob: 200 }), // Bob lands 200 -> halved to 100
+        round('cara', { ann: 9, bob: 9, cara: 1 }), // Cara joins seeded at 100, calls a Yaniv, scores 0
+      ],
+      s,
+    );
+    expect(state.rounds[0]!.halvings).toEqual([{ playerId: 'bob', from: 200, to: 100 }]);
+    expect(state.rounds[1]!.outcome).toBe('YANIV');
+    expect(state.rounds[1]!.halvings).toEqual([]); // seed untouched
+    expect(totalOf(state, 'cara')).toBe(100); // NOT 50 — the seed survives a 0-score round
+    expect(totalOf(state, 'bob')).toBe(109); // moved off 100 by his own hand of 9
+  });
 });
 
 // --------------------------------------------------------------------------
