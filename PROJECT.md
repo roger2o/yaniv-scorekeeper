@@ -51,6 +51,8 @@ Three changes Roger asked for on 2026-09-03, all three **live the same evening**
 
 - **Always-on icon** — the icon for the "keep screen on" toggle should be a light bulb or battery symbol, not a moon.
 
+- **Seat reorder via drag and drop** — the seating reorder feature should use drag and drop rather than two separate arrow buttons.
+
 ## Scoring Engine (the core logic)
 
 For a round where the caller's hand value is `C` and the lowest *other* player's hand value is `L`:
