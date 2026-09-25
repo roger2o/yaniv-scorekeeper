@@ -49,6 +49,8 @@ Three changes Roger asked for on 2026-09-03, all three **live the same evening**
 - Multi-device sync, accounts, online play.
 - Any card-game simulation (dealing, hand validation, run/set legality).
 
+- **Always-on icon** — the icon for the "keep screen on" toggle should be a light bulb or battery symbol, not a moon.
+
 ## Scoring Engine (the core logic)
 
 For a round where the caller's hand value is `C` and the lowest *other* player's hand value is `L`:
