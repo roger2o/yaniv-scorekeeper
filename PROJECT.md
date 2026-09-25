@@ -55,6 +55,8 @@ Three changes Roger asked for on 2026-09-03, all three **live the same evening**
 
 - **Configurable Yaniv level** — allow the Yaniv threshold to be changed (e.g. from 5 to 7), so players can set the maximum hand value at which a player may call Yaniv.
 
+- **Change Yaniv threshold mid-game** — allow the Yaniv level (e.g. from 5 to 7) to be changed while a game is in progress, not just at setup.
+
 ## Scoring Engine (the core logic)
 
 For a round where the caller's hand value is `C` and the lowest *other* player's hand value is `L`:
