@@ -924,10 +924,12 @@ describe('HELP DIALOG regression — behaves exactly as it did before this branc
     fireEvent.keyDown(playTab, { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(useTab);
 
+    // End goes to the LAST tab, which is Install since the third tab arrived.
+    const installTab = screen.getByRole('tab', { name: 'Install' });
     fireEvent.keyDown(useTab, { key: 'End' });
-    expect(document.activeElement).toBe(playTab);
+    expect(document.activeElement).toBe(installTab);
 
-    fireEvent.keyDown(playTab, { key: 'Home' });
+    fireEvent.keyDown(installTab, { key: 'Home' });
     expect(document.activeElement).toBe(useTab);
     expect(useTab.getAttribute('aria-selected')).toBe('true');
   });

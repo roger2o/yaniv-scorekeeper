@@ -1,10 +1,10 @@
 /**
  * HELP dialog — the in-app Help screen (Phase 8 brief item).
  *
- * A modal dialog carrying TWO clearly-labelled tabs:
- *   - "How to Use"  (Section A — operating the scorekeeper, then the shared
- *                    Install on Android / iPhone sections)
+ * A modal dialog carrying THREE clearly-labelled tabs:
+ *   - "How to Use"  (Section A — operating the scorekeeper)
  *   - "How to Play" (Section B — the rules of Yaniv)
+ *   - "Install"     (putting the app on an Android or iPhone home screen)
  * plus a "Share this app" action. The prose lives in the single-source
  * content blocks (src/content/helpContent.tsx) so the in-app Help and the
  * (later) landing page can never drift apart.
@@ -30,19 +30,19 @@
  */
 
 import { useRef, useState } from 'react';
-import { HowToUse, InstallAndroid, InstallIos } from '../content/helpContent';
-import { HowToPlay } from '../content/helpContent';
+import { HowToPlay, HowToUse, InstallGuide } from '../content/helpContent';
 import { ModalLayer } from './modal';
 import { useModalDialog } from './useModalDialog';
 import '../content/helpProse.css';
 import './modal.css';
 import './HelpDialog.css';
 
-type TabId = 'use' | 'play';
+type TabId = 'use' | 'play' | 'install';
 
 const TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: 'use', label: 'How to Use' },
   { id: 'play', label: 'How to Play' },
+  { id: 'install', label: 'Install' },
 ];
 
 export interface HelpDialogProps {
@@ -153,8 +153,9 @@ function HelpDialogBody({ onClose, returnFocusTo }: HelpDialogProps) {
               Help
             </h2>
             <p className="help-dialog__intro">
-              Two quick guides: <strong>How to Use</strong> this scorekeeper, and{' '}
-              <strong>How to Play</strong> Yaniv itself. Open this any time — your
+              Three quick guides: <strong>How to Use</strong> this scorekeeper,{' '}
+              <strong>How to Play</strong> Yaniv, and how to <strong>Install</strong>{' '}
+              it on your phone. Open this any time — your
               game is safe, nothing is lost.
             </p>
           </div>
@@ -202,18 +203,7 @@ function HelpDialogBody({ onClose, returnFocusTo }: HelpDialogProps) {
             hidden={active !== 'use'}
             tabIndex={0}
           >
-            {active === 'use' && (
-              <>
-                <HowToUse />
-                {/* Install steps, shared word for word with the landing page,
-                    for a friend who is handed the phone or a scorekeeper on a
-                    new phone. Last, because most readers here already have it. */}
-                <div className="help-prose help-install">
-                  <InstallAndroid headingId="help-install-android" headingLevel="h3" />
-                  <InstallIos headingId="help-install-ios" headingLevel="h3" />
-                </div>
-              </>
-            )}
+            {active === 'use' && <HowToUse />}
           </div>
           <div
             role="tabpanel"
@@ -223,6 +213,15 @@ function HelpDialogBody({ onClose, returnFocusTo }: HelpDialogProps) {
             tabIndex={0}
           >
             {active === 'play' && <HowToPlay />}
+          </div>
+          <div
+            role="tabpanel"
+            id="help-panel-install"
+            aria-labelledby="help-tab-install"
+            hidden={active !== 'install'}
+            tabIndex={0}
+          >
+            {active === 'install' && <InstallGuide />}
           </div>
         </div>
 

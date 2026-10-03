@@ -421,9 +421,8 @@ export function HowToPlay() {
 
 /**
  * INSTALL SECTIONS — "Install on Android" and "Install on iPhone / iPad".
- * Shared by the landing page (as h2 cards) and the in-app Help (as h3 sections
- * under How to Use), so the two can never drift apart. Copy is unchanged from
- * the landing page. The landing page's early "open this in Safari" banner for
+ * Used by the landing page (as h2 cards). The in-app Help has its own shorter
+ * Install tab (InstallGuide, below) since 2026-10-03. The landing page's early "open this in Safari" banner for
  * iPhone visitors in another browser is NOT part of this — it stays on the
  * landing page only. Styles live in helpProse.css.
  */
@@ -516,5 +515,54 @@ export function InstallIos({
         </li>
       </ol>
     </section>
+  );
+}
+
+/**
+ * INSTALL TAB — the in-app Help's dedicated "Install" guide (Roger,
+ * 2026-10-03). Deliberately its OWN shorter copy, not the landing page's
+ * InstallAndroid / InstallIos above: the landing keeps its sections exactly as
+ * they are, and this tab speaks to someone already inside the app. The site
+ * address is a real link so it can be long-pressed and copied.
+ */
+const SITE_HOST = 'yaniv-scorekeeper.netlify.app';
+const SITE_URL = `https://${SITE_HOST}/`;
+
+function SiteLink() {
+  return <a href={SITE_URL}>{SITE_HOST}</a>;
+}
+
+export function InstallGuide() {
+  return (
+    <div className="help-prose">
+      <p>
+        Put Yaniv on your home screen so it opens like any other app, fills the
+        screen and works with no internet. If you opened it from your home
+        screen, it’s already installed.
+      </p>
+      <section aria-labelledby="help-install-android">
+        <h3 id="help-install-android">Android (Chrome)</h3>
+        <ol>
+          <li>
+            Open <SiteLink /> in Chrome.
+          </li>
+          <li>Tap the ⋮ menu, top-right.</li>
+          <li>Tap “Install app” or “Add to Home screen”, then Install.</li>
+          <li>Open Yaniv from your home screen.</li>
+        </ol>
+      </section>
+      <section aria-labelledby="help-install-ios">
+        <h3 id="help-install-ios">iPhone / iPad (Safari only)</h3>
+        <ol>
+          <li>
+            Open <SiteLink /> in Safari. Other browsers can’t install apps on
+            iPhone or iPad.
+          </li>
+          <li>Tap Share, the square with an arrow pointing up.</li>
+          <li>Scroll down, tap “Add to Home Screen”, then Add.</li>
+          <li>Open Yaniv from your home screen.</li>
+        </ol>
+      </section>
+    </div>
   );
 }

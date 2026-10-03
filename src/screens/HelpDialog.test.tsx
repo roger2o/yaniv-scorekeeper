@@ -136,12 +136,13 @@ describe('Help — content of both tabs', () => {
     expect(screen.getByText(/your 6 \+ the 30 penalty/i)).toBeTruthy();
   });
 
-  it('How to Use also carries the Android and iPhone install steps', () => {
+  it('the Install tab shows the Android and iPhone steps', () => {
     renderSetup();
     fireEvent.click(screen.getByRole('button', { name: 'Help' }));
-    expect(screen.getByRole('heading', { name: /Install on Android/ })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /Install on iPhone \/ iPad/ })).toBeTruthy();
-    expect(screen.getByText(/on iPhone and iPad you must use Safari/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'Install' }));
+    expect(screen.getByRole('heading', { name: 'Android (Chrome)' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'iPhone / iPad (Safari only)' })).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: 'yaniv-scorekeeper.netlify.app' })).toHaveLength(2);
   });
 
   it('uses correct terminology — "starts the next round", never "deals/dealer"', () => {

@@ -147,3 +147,14 @@
   font-size: 0.85em;
   white-space: nowrap;
 }
+
+/* Links in the guides (the site address on the Install tab). --ink rather than
+   --accent, which is below the 4.5:1 text floor on Felt; bold underline carries
+   the "this is a link" cue so colour is not the only one. Same treatment as the
+   Help dialog's share fallback link. */
+.help-prose a {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}

@@ -130,6 +130,7 @@ The full design proposal — themes, layouts, and rationale — is in `docs/ui-d
 
 ## Current Status
 
+- **Help has its own Install tab (2026-10-03, Roger's request).** A third tab, Install, gives short Android (Chrome) and iPhone / iPad (Safari only) steps in Roger's draft wording, with the site address as a tappable link; the install sections are gone from the end of How to Use. The landing page's install sections are unchanged. 861 tests, clean build.
 - **Theme switch is now icons only (2026-10-03, Roger's request).** A spade for Felt & Chips and a star for Party Arcade, the chosen one drawn solid; screen readers still hear the theme names. The top bar is now one row on Setup and Play at 375px and 430px; at 320px it still wraps (needs 329px, has 288px). 861 tests, clean build.
 - **Install steps now in Help (2026-10-03, Roger's request).** The landing page's "Install on Android" and "Install on iPhone / iPad" sections are now shared content, shown word for word at the end of Help's How to Use tab as well as on the landing page; the landing page's early open-in-Safari banner stays landing-only. 861 tests, clean build.
 - **Top-bar round buttons resized and reordered (2026-10-03, Roger's request).** Keep-screen-on and Help are now 50px, the same height as the Felt/Arcade toggle, with keep-screen-on first. The toggle still wraps to a second row on Setup and Play at every phone width (one row needs 424px, a 430px phone gives 398px), so that part of the ask is open for Roger. 860 tests, clean build.
