@@ -80,6 +80,10 @@
  * the toggle height), so the cluster needs 313px; re-measured, the bar is 124px
  * and still wraps on Setup/Play at 320, 375 and 430px (one row needs 424px).
  *
+ * UPDATE 2026-10-03 (later): the theme toggle is now icons only (102px). Re-measured:
+ * Setup and Play are ONE row (66px bar) at 375 and 430px. At 320px they still wrap
+ * (one row needs 329px, the frame gives 288px). The landing is one row at all three.
+ *
  * `justify-content: flex-end` keeps a wrapped second row aligned under the first
  * rather than drifting left. */
 .top-bar__controls {

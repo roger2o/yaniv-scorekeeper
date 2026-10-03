@@ -10,12 +10,13 @@
 .theme-toggle__option {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  /* 40px tall + the group's 4px padding and 1px border = 50px, matching the
+     round top-bar buttons. Icon only, so no text padding. */
+  width: 44px;
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0;
   border-radius: var(--radius-pill);
-  font-weight: 700;
-  font-size: 0.9rem;
   color: var(--ink-muted);
   background: transparent;
   transition: background-color var(--dur-base) var(--ease-out),
@@ -27,7 +28,6 @@
   color: var(--accent-ink);
 }
 
-.theme-toggle__glyph {
-  font-size: 1rem;
-  line-height: 1;
+.theme-toggle__icon {
+  display: block;
 }
