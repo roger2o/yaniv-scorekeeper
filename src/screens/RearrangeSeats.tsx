@@ -41,6 +41,11 @@
  * removal can be taken back. There is no bring-back control: someone returning
  * to the table comes back through "Add player" like any other mid-game join.
  *
+ * ADDING A PLAYER lives here too (moved from the Play screen, Roger 2026-10-03),
+ * and like removal it applies IMMEDIATELY: it is a real game change, not part of
+ * the ordering draft. The new player is appended to the open draft as they
+ * appear, so "Save order" keeps them, and Cancel only discards the reordering.
+ *
  * DIRECTION (verified against ringLayout.ts, not assumed): the ring places seat
  * index i at `xPct = 50 − r·sin(i·360/N)`, so index 0 is bottom-centre and index
  * 1 lands at x = 12%, the LEFT edge. Position 1 therefore sits nearest the phone
@@ -71,7 +76,7 @@ export interface RearrangeSeatsProps {
 }
 
 export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
-  const { state, setRingOrder, leavePlayer } = useStore();
+  const { state, setRingOrder, leavePlayer, addPlayer } = useStore();
 
   // The engine's seat order is the authority we reconcile against and the
   // fallback we can always return to. A player who has LEFT is not round the
@@ -159,6 +164,39 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
       headingRef.current?.focus();
     }
   }, [removing]);
+
+  // ADD PLAYER. Applies at once through the store, exactly as it did from the
+  // Play screen. When the joiner shows up in the standings, they are appended
+  // to the open draft (the ring's next seat), announced, and focus goes back to
+  // the "Add player" button, which replaces the input that was just used.
+  const [addingPlayer, setAddingPlayer] = useState(false);
+  const [newName, setNewName] = useState('');
+  const addButtonRef = useRef<HTMLButtonElement | null>(null);
+  const refocusAdd = useRef(false);
+  const commitAddPlayer = () => {
+    addPlayer(newName);
+    setNewName('');
+    setAddingPlayer(false);
+    refocusAdd.current = true;
+  };
+  useEffect(() => {
+    const joined = seatOrderIds.filter((id) => !draftRef.current.includes(id));
+    if (joined.length === 0) return;
+    const next = [...draftRef.current, ...joined];
+    setDraft(next);
+    announce(
+      joined
+        .map((id) => `${nameOf(id)} joined, position ${next.indexOf(id) + 1} of ${next.length}.`)
+        .join(' '),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seatOrderIds]);
+  useEffect(() => {
+    if (!addingPlayer && refocusAdd.current) {
+      refocusAdd.current = false;
+      addButtonRef.current?.focus();
+    }
+  }, [addingPlayer]);
 
   /** Move a player one place earlier (-1) or later (+1), wrapping round the ring. */
   const move = (playerId: string, delta: -1 | 1) => {
@@ -409,6 +447,53 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
           );
         })}
       </ol>
+
+      {addingPlayer ? (
+        <div className="card play__join-card">
+          <p className="play__join-note">
+            New player joins seeded at the current highest score, so no head start.
+            They join straight away, even if you then cancel the reordering.
+          </p>
+          <div className="play__join-row">
+            <input
+              className="play__join-input"
+              type="text"
+              autoFocus
+              aria-label="New player name"
+              placeholder={`Player ${(state.settings?.players.length ?? 0) + 1}`}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitAddPlayer();
+              }}
+            />
+            <button type="button" className="btn btn--primary" onClick={commitAddPlayer}>
+              Join
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => {
+                setAddingPlayer(false);
+                setNewName('');
+                refocusAdd.current = true;
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          ref={addButtonRef}
+          type="button"
+          className="btn btn--secondary btn--block rearrange__add"
+          aria-label="Add player"
+          onClick={() => setAddingPlayer(true)}
+        >
+          ＋ Add player
+        </button>
+      )}
 
       <p className="rearrange__note">
         This changes the circle view only. Scores, the scoresheet, and who starts

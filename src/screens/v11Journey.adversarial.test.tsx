@@ -669,10 +669,14 @@ describe('Rearrange — combined with the player set changing', () => {
     moveLater('a'); // b, a, c, d
     saveOrder();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
+
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     const input = screen.getByPlaceholderText(/Player 5/);
     fireEvent.change(input, { target: { value: 'Eve' } });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     const ids = ringIds();
     expect(ids).toHaveLength(5);
@@ -693,11 +697,14 @@ describe('Rearrange — combined with the player set changing', () => {
     saveOrder();
 
     // Strand a latecomer: add them, then undo the round they were to join before.
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     fireEvent.change(screen.getByPlaceholderText(/Player 5/), {
       target: { value: 'Eve' },
     });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     const joinerId = ringIds()[4]!;
 
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
@@ -750,9 +757,10 @@ describe('Rearrange — combined with the player set changing', () => {
       ringOrder: ['g', 'a', 'b', 'c', 'd', 'e', 'f'],
     });
 
-    // 7 players -> big board, and the circle-only control is correctly withdrawn.
+    // 7 players -> big board. Seats stays offered (it is where players are
+    // added and removed), and the stored arrangement is harmless here.
     expect(screen.queryByTestId('ring-view')).toBeNull();
-    expect(screen.queryByRole('button', { name: /Rearrange seats/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Rearrange seats/ })).toBeTruthy();
     expect(scoresheetColumns()).toEqual([
       'Ann',
       'Bo',

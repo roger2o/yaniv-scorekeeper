@@ -44,7 +44,8 @@ export function HowToUse() {
             <strong>7</strong> is the usual one; you can also choose{' '}
             <strong>5</strong> or <strong>11</strong>. This is the most a hand
             can total for a player to call “Yaniv!”. You can change it
-            mid-game with the “Yaniv” button under the title on the play screen.
+            mid-game with the “Yaniv” button in the bar at the bottom of the play
+            screen.
           </li>
           <li>
             <strong>100-halving</strong> — leave this <strong>on</strong> for
@@ -148,8 +149,8 @@ export function HowToUse() {
       <section aria-labelledby="howto-a6">
         <h3 id="howto-a6">Add a player mid-game</h3>
         <p>
-          Someone wants to join a game that’s already going? Use{' '}
-          <strong>Add player</strong>.
+          Someone wants to join a game that’s already going? Tap{' '}
+          <strong>Seats</strong>, then <strong>Add player</strong>.
         </p>
         <ul>
           <li>

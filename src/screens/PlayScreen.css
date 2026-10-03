@@ -160,7 +160,7 @@
  * so a long label can never push its own box wider than its share — that is what
  * stops content deciding the layout, and it is why the labels are wrapped in
  * truncating spans below. Four buttons therefore land on exactly two rows at every
- * width, and one button (the circle-only "Seats") on exactly one.
+ * width. (Seats now shows in both views, so the bar always has four.)
  *
  * MEASURED FIT of the widest label, "↩ Undo Round", against the space a column
  * gives it (column width minus 10px padding each side and 2px border each side):
@@ -227,53 +227,3 @@
 }
 
 /* --- Join card ----------------------------------------------------------- */
-.play__join-card {
-  margin-top: 12px;
-}
-
-.play__join-note {
-  font-size: 0.9rem;
-  color: var(--ink-muted);
-  margin: 0 0 10px;
-}
-
-.play__join-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.play__join-input {
-  flex: 1;
-  min-width: 140px;
-  min-height: 52px;
-  padding: 0 14px;
-  font: inherit;
-  font-size: 1.05rem;
-  color: var(--chip-text);
-  background: var(--chip);
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.play__join-input:focus-visible {
-  border-color: var(--accent);
-}
-
-/* --- Yaniv-level chip (under the title in the top bar) ------------------- */
-.top-bar__lead {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  /* 2px keeps title (56) + chip (56) inside the 114px the wrapped right-hand
-     cluster already takes, so the top bar stays at its measured 130px. */
-  gap: 2px;
-  min-width: 0;
-}
-
-.play__level {
-  min-height: 56px;
-  padding: 0 14px;
-  font-size: 1rem;
-  white-space: nowrap;
-}

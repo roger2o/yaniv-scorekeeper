@@ -290,3 +290,41 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+
+/* --- Add player (mid-game join), moved here from the Play screen ------- */
+.play__join-card {
+  margin: 4px 0 12px;
+}
+
+.play__join-note {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+  margin: 0 0 10px;
+}
+
+.play__join-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.play__join-input {
+  flex: 1;
+  min-width: 140px;
+  min-height: 56px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--chip-text);
+  background: var(--chip);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.play__join-input:focus-visible {
+  border-color: var(--accent);
+}
+
+.rearrange__add {
+  margin: 4px 0 12px;
+}

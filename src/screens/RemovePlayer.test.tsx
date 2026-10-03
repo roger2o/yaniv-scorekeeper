@@ -490,11 +490,14 @@ describe('a departure is announced, and never leaves the game unusable', () => {
     renderGame(settings, [{ callerId: 'a', hands: { a: 3, b: 8 } }]);
 
     // Cy joins mid-game, then another round is played.
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add player' }));
     fireEvent.change(screen.getByLabelText('New player name'), {
       target: { value: 'Cy' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Join' }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(ringIds()).toHaveLength(3);
     const cyId = screen.getByTestId('markers').textContent!.split('|')[2]!.split(':')[0]!;
     fireEvent.click(screen.getByTestId('probe-add-round'));

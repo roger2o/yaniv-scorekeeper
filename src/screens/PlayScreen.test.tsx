@@ -178,7 +178,7 @@ describe('PlayScreen — the four action buttons form one row group', () => {
     expect(document.querySelector('.play__end-row')).toBeNull();
     expect(
       Array.from(buttons).map((b) => b.getAttribute('aria-label')),
-    ).toEqual(['Add player', 'Undo round', 'Rearrange seats', 'End game']);
+    ).toEqual(['Yaniv 7, change the Yaniv level', 'Undo round', 'Rearrange seats', 'End game']);
   });
 
   it('shows the abbreviated labels Roger specified, glyphs included', () => {
@@ -188,12 +188,12 @@ describe('PlayScreen — the four action buttons form one row group', () => {
       Array.from(actions.querySelectorAll('.play__actions-label')).map(
         (l) => l.textContent,
       ),
-    ).toEqual(['＋ Add Player', '↩ Undo Round', '⇄ Seats', 'End']);
+    ).toEqual(['Yaniv 7', '↩ Undo Round', '⇄ Seats', 'End']);
   });
 
   it('keeps the FULL wording as the accessible name of every button', () => {
     renderPlay(threePlayers());
-    for (const name of ['Add player', 'Undo round', 'Rearrange seats', 'End game']) {
+    for (const name of ['Yaniv 7, change the Yaniv level', 'Undo round', 'Rearrange seats', 'End game']) {
       expect(screen.getByRole('button', { name })).toBeTruthy();
     }
   });
@@ -242,7 +242,7 @@ describe('PlayScreen — the four action buttons form one row group', () => {
   it('keeps the weight hierarchy: every-round controls prominent, End quiet', () => {
     renderPlay(threePlayers());
     // Abbreviating "End game" to "End" must not make it visually dominant.
-    for (const name of ['Add player', 'Undo round']) {
+    for (const name of ['Yaniv 7, change the Yaniv level', 'Undo round']) {
       expect(screen.getByRole('button', { name }).className).toContain('btn--secondary');
     }
     for (const name of ['Rearrange seats', 'End game']) {
@@ -250,7 +250,7 @@ describe('PlayScreen — the four action buttons form one row group', () => {
     }
   });
 
-  it('drops to three buttons on the big board, where Seats does not apply', () => {
+  it('keeps all four on the big board: Seats is also where players are added', () => {
     const seven: GameSettings = {
       players: Array.from({ length: 7 }, (_, i) => ({
         id: `p${i}`,
@@ -264,22 +264,26 @@ describe('PlayScreen — the four action buttons form one row group', () => {
     renderPlay(seven);
     const buttons = screen.getByTestId('play-actions').querySelectorAll('button');
     expect(Array.from(buttons).map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Add player',
+      'Yaniv 7, change the Yaniv level',
       'Undo round',
+      'Rearrange seats',
       'End game',
     ]);
   });
 });
 
 describe('PlayScreen — mid-game join', () => {
-  it('adds a seat via the addPlayer affordance', () => {
+  it('adds a seat via Seats, then Add player', () => {
     renderPlay(threePlayers(), [{ callerId: 'a', hands: { a: 3, b: 8, c: 12 } }]);
     expect(screen.getByTestId('player-count').textContent).toBe('3');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     const input = screen.getByLabelText('New player name');
     fireEvent.change(input, { target: { value: 'Dee' } });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(screen.getByTestId('player-count').textContent).toBe('4');
     // Game stays valid (no engine error).
@@ -311,10 +315,13 @@ describe('PlayScreen — edit-invalidates-join error is caught, not thrown (brie
     });
 
     // Latecomer joins (join marker = current history length = 1).
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     const input = screen.getByLabelText('New player name');
     fireEvent.change(input, { target: { value: 'Cy' } });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByTestId('game-null').textContent).toBe('no');
 
     // Edit the last (and only) round so Bo is knocked out — auto-ends round 0,

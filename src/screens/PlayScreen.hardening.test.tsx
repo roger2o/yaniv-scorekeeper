@@ -150,9 +150,13 @@ describe('PlayScreen — mid-game join via the UI seeds correctly', () => {
     renderPlay(players(3), [{ callerId: 'a', hands: { a: 0, b: 40, c: 12 } }]);
     expect(screen.getByTestId('player-count').textContent).toBe('3');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
+
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     fireEvent.change(screen.getByLabelText('New player name'), { target: { value: 'Dee' } });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     // Ring grew to 4 players.
     expect(screen.getByTestId('player-count').textContent).toBe('4');
@@ -173,9 +177,13 @@ describe('PlayScreen — mid-game join via the UI seeds correctly', () => {
     ]);
     expect(totalOf('b')).toBe(100);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
+
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     fireEvent.change(screen.getByLabelText('New player name'), { target: { value: 'Cy' } });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     const joiner = totals().find((s) => s.id !== 'a' && s.id !== 'b')!;
     // Seed is 100 (highest active), NOT halved to 50.
@@ -188,26 +196,35 @@ describe('PlayScreen — mid-game join via the UI seeds correctly', () => {
     renderPlay(players(3), [{ callerId: 'a', hands: { a: 0, b: 8, c: 12 } }]);
     expect(screen.getByTestId('starts-next').textContent).toBe('a');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
+
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     fireEvent.change(screen.getByLabelText('New player name'), { target: { value: 'Dee' } });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(screen.getByTestId('starts-next').textContent).toBe('a');
   });
 
   it('cancelling the add-player form does not add a seat', () => {
     renderPlay(players(3), [{ callerId: 'a', hands: { a: 0, b: 8, c: 12 } }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     fireEvent.change(screen.getByLabelText('New player name'), { target: { value: 'Dee' } });
-    fireEvent.click(screen.getByRole('button', { name: /Cancel/ }));
+    // The join form's own Cancel (the screen's Cancel sits below it).
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cancel' })[0]!);
     expect(screen.getByTestId('player-count').textContent).toBe('3');
   });
 
   it('a blank joiner name seeds a "Player N" default and still joins', () => {
     renderPlay(players(3), [{ callerId: 'a', hands: { a: 0, b: 40, c: 12 } }]);
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     // Leave the name blank, click Join.
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByTestId('player-count').textContent).toBe('4');
     // The default name "Player 4" appears.
     expect(screen.getByText(/joined — seeded at 40, no head start/)).toBeTruthy();

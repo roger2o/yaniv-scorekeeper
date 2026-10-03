@@ -476,10 +476,10 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
     );
   });
 
-  it('is not offered when the circle view is not the view in use', () => {
+  it('is offered in the Big Board view too, since adding a player lives there', () => {
     renderPlay(ONE_ROUND);
     fireEvent.click(screen.getByRole('button', { name: /Big board/ }));
-    expect(screen.queryByRole('button', { name: /Rearrange seats/ })).toBeNull();
+    expect(screen.getByRole('button', { name: /Rearrange seats/ })).toBeTruthy();
   });
 });
 
@@ -600,6 +600,24 @@ describe('Rearrange seats — survives a refresh and a changing table', () => {
     expect(ringOrderOnScreen()).toEqual(['b', 'a', 'c', 'd']);
   });
 
+  it('a player added inside Seats is kept by Save order and drawn in the circle', () => {
+    renderPlay(ONE_ROUND);
+    openRearrange();
+    fireEvent.keyDown(screen.getByTestId('reorder-d'), { key: 'ArrowUp' }); // a, b, d, c
+    fireEvent.click(screen.getByRole('button', { name: 'Add player' }));
+    fireEvent.change(screen.getByLabelText('New player name'), { target: { value: 'Eve' } });
+    fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Joined at once, appended to the open draft, focus back on Add player.
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Add player' }));
+    fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
+
+    const stored = screen.getByTestId('stored-ring-order').textContent!.split(',');
+    expect(stored).toHaveLength(5);
+    expect(stored.slice(0, 4)).toEqual(['a', 'b', 'd', 'c']);
+    expect(ringOrderOnScreen()).toEqual(stored);
+  });
+
   it('a mid-game join joins the END of the ring without disturbing the arrangement', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
@@ -608,11 +626,14 @@ describe('Rearrange seats — survives a refresh and a changing table', () => {
     expect(ringOrderOnScreen()).toEqual(['a', 'b', 'd', 'c']);
 
     // A latecomer joins; the ring grows and the saved arrangement still holds.
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     fireEvent.change(screen.getByLabelText('New player name'), {
       target: { value: 'Eve' },
     });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     const order = ringOrderOnScreen();
     expect(order.length).toBe(5);

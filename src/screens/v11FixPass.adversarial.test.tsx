@@ -1161,11 +1161,14 @@ describe('FIX 2 — the repair must never damage a LEGITIMATE arrangement', () =
     seed(save({ ringOrder: ['d', 'c', 'b', 'a'] }));
     render(<App />);
     expect(ringIds()).toEqual(['d', 'c', 'b', 'a']);
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange seats' }));
     fireEvent.click(screen.getByRole('button', { name: /Add player/ }));
     fireEvent.change(screen.getByLabelText('New player name'), {
       target: { value: 'Eve' },
     });
     fireEvent.click(screen.getByRole('button', { name: /^Join$/ }));
+    // Back to the Play screen; the join already applied.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     const ids = ringIds();
     expect(ids.slice(0, 4)).toEqual(['d', 'c', 'b', 'a']);
     expect(ids).toHaveLength(5);

@@ -10,7 +10,7 @@
  * <table>.
  *
  * Tapping New Round opens the ENTRY VIEW (RoundEntry). Standings never reorder
- * by score. An "add player" affordance joins a latecomer mid-game. Undo reverts
+ * by score. Seats is where a latecomer is added mid-game. Undo reverts
  * the last round. If an edit/undo makes the engine reject the game (e.g. a
  * recorded join no longer has a round to land in), we show a plain message
  * instead of a blank screen. That frame ALWAYS offers at least one control that
@@ -60,7 +60,6 @@ export function PlayScreen() {
     engineError,
     undoLastRound,
     endGame,
-    addPlayer,
     removePlayer,
     resetGame,
     setThreshold,
@@ -68,8 +67,6 @@ export function PlayScreen() {
 
   const [entering, setEntering] = useState(false);
   const [showBoard, setShowBoard] = useState(false);
-  const [addingPlayer, setAddingPlayer] = useState(false);
-  const [newName, setNewName] = useState('');
   const [rearranging, setRearranging] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [pickingLevel, setPickingLevel] = useState(false);
@@ -156,7 +153,6 @@ export function PlayScreen() {
     return <RoundEntry onDone={() => setEntering(false)} />;
   }
 
-  const playerCount = game.standings.length;
   // A departed player's chip leaves the circle — the ring is the live picture of
   // who is actually round the table — so the ring is sized and drawn from the
   // players still seated. Their score stays on the scoresheet.
@@ -182,40 +178,17 @@ export function PlayScreen() {
   // engine's seat order, which is the default and the fallback.
   const ringOrder = reconcileRingOrder(state.ringOrder, seatedIds);
 
-  const commitAddPlayer = () => {
-    addPlayer(newName);
-    setNewName('');
-    setAddingPlayer(false);
-  };
-
   return (
     <div className="app-frame play">
       <Callouts game={game} />
 
       <div className="top-bar">
-        {/* The Yaniv-level chip sits under the title, in the space the wrapped
-            right-hand cluster already leaves free, so it costs no height and
-            shows in both the circle and Big Board views. */}
-        <div className="top-bar__lead">
-          <span className="top-bar__title">
-            <span className="top-bar__glyph" aria-hidden="true">
-              🃏
-            </span>
-            YANIV
+        <span className="top-bar__title">
+          <span className="top-bar__glyph" aria-hidden="true">
+            🃏
           </span>
-          {state.settings !== null && (
-            <button
-              ref={levelRef}
-              type="button"
-              className="btn btn--ghost play__level"
-              aria-label={`Yaniv ${state.settings.threshold}, change the Yaniv level`}
-              aria-haspopup="dialog"
-              onClick={() => setPickingLevel(true)}
-            >
-              Yaniv {state.settings.threshold}
-            </button>
-          )}
-        </div>
+          YANIV
+        </span>
         <div className="top-bar__controls">
           <HelpButton />
           <ScreenAwakeToggle />
@@ -246,51 +219,20 @@ export function PlayScreen() {
         </button>
       </div>
 
-      {/* --- Add-player (mid-game join) affordance --- */}
-      {addingPlayer ? (
-        <div className="card play__join-card">
-          <p className="play__join-note">
-            New player joins seeded at the current highest score — no head start.
-          </p>
-          <div className="play__join-row">
-            <input
-              className="play__join-input"
-              type="text"
-              autoFocus
-              aria-label="New player name"
-              placeholder={`Player ${playerCount + 1}`}
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitAddPlayer();
-              }}
-            />
-            <button type="button" className="btn btn--primary" onClick={commitAddPlayer}>
-              Join
-            </button>
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={() => {
-                setAddingPlayer(false);
-                setNewName('');
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* ALL FOUR actions share ONE container, two per row. See PlayScreen.css for
-           the layout, and the header comment above for the labelling rules. */
+      {/* ALL FOUR actions share ONE container, two per row. See PlayScreen.css for
+          the layout, and the header comment above for the labelling rules. Adding a
+          player lives inside Seats (Roger, 2026-10-03), which frees this slot for
+          the Yaniv level. */}
         <div className="play__actions" data-testid="play-actions">
           <button
+            ref={levelRef}
             type="button"
             className="btn btn--secondary"
-            aria-label="Add player"
-            onClick={() => setAddingPlayer(true)}
+            aria-label={`Yaniv ${state.settings!.threshold}, change the Yaniv level`}
+            aria-haspopup="dialog"
+            onClick={() => setPickingLevel(true)}
           >
-            <span className="play__actions-label">＋ Add Player</span>
+            <span className="play__actions-label">Yaniv {state.settings!.threshold}</span>
           </button>
           <button
             type="button"
@@ -301,19 +243,18 @@ export function PlayScreen() {
           >
             <span className="play__actions-label">↩ Undo Round</span>
           </button>
-          {/* Rearranging is a CIRCLE-VIEW-ONLY preference, so it is only offered
-              while the circle view is the one in use. */}
-          {!useBoard && (
-            <button
-              ref={rearrangeRef}
-              type="button"
-              className="btn btn--ghost play__action--compact"
-              aria-label="Rearrange seats"
-              onClick={() => setRearranging(true)}
-            >
-              <span className="play__actions-label">⇄ Seats</span>
-            </button>
-          )}
+          {/* Shown in BOTH views: Seats is also where a player is added or
+              removed, and the Big Board (e.g. too many players for the ring) must
+              not lose that. The reordering itself only affects the circle. */}
+          <button
+            ref={rearrangeRef}
+            type="button"
+            className="btn btn--ghost play__action--compact"
+            aria-label="Rearrange seats"
+            onClick={() => setRearranging(true)}
+          >
+            <span className="play__actions-label">⇄ Seats</span>
+          </button>
           <button
             ref={endGameRef}
             type="button"
@@ -325,7 +266,6 @@ export function PlayScreen() {
             <span className="play__actions-label">End</span>
           </button>
         </div>
-      )}
 
       {pickingLevel && state.settings !== null && (
         <YanivLevelDialog
