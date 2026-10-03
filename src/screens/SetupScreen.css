@@ -70,34 +70,6 @@
   font-size: 0.95rem;
 }
 
-/* --- Segmented control (threshold) --------------------------------------- */
-.segmented {
-  display: flex;
-  gap: 6px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 6px;
-}
-
-.segmented__option {
-  flex: 1;
-  min-height: 52px;
-  border-radius: calc(var(--radius) - 4px);
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 1.2rem;
-  color: var(--ink);
-  background: transparent;
-  transition: background-color var(--dur-base) var(--ease-out),
-    color var(--dur-base) var(--ease-out), transform var(--dur-press) var(--ease-out);
-}
-
-.segmented__option[data-selected='true'] {
-  background: var(--accent);
-  color: var(--accent-ink);
-}
-
 /* --- Toggle switch ------------------------------------------------------- */
 .setup__toggle-row {
   display: flex;

@@ -53,7 +53,7 @@ Three changes Roger asked for on 2026-09-03, all three **live the same evening**
 
 - **Seat reorder via drag and drop** — the seating reorder feature should use drag and drop rather than two separate arrow buttons. *Shipped in v1.3 (2026-10-03): each row has a six-dot grip to drag; the arrow and "Swap seats" buttons are gone, and no arrows appear anywhere on screen (Roger). Keyboard and screen-reader users move a player with the arrow keys on the focused grip. Still staged: nothing applies until Save order. This reverses the 2026-07-29 choice of buttons over drag.*
 
-- **Change the Yaniv level mid-game** — allow the Yaniv level (e.g. from 5 to 7) to be changed while a game is in progress, not just at setup. *Two James notes merged into one (Roger, 2026-10-03: the second clarifies the first). The level can already be chosen at setup, so the new part is changing it mid-game. Not scheduled; Roger chose to build the icon and the drag reorder first.*
+- **Change the Yaniv level mid-game — built (2026-10-03).** A "Yaniv 7" button under the title on the Play screen (both views) opens a 5/7/11 picker with Cancel and Save; the new level applies from the next round entered, scores and the save format are unchanged.
 
 ## Scoring Engine (the core logic)
 

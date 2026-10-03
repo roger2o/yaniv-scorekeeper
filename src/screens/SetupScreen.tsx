@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from '../state';
-import type { GameSettings, Threshold } from '../engine';
+import { THRESHOLDS, type GameSettings, type Threshold } from '../engine';
 import { makePlayerId, seatColorVar, seatShape } from './seat';
 import { ThemeToggle } from '../theme';
 import { ScreenAwakeToggle } from '../awake';
@@ -23,8 +23,6 @@ interface DraftPlayer {
   id: string;
   name: string;
 }
-
-const THRESHOLDS: Threshold[] = [5, 7, 11];
 
 export function SetupScreen() {
   const { startGame, storageWarning } = useStore();

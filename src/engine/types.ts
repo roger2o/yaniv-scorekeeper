@@ -12,6 +12,9 @@
 /** Yaniv call threshold — gates whether a Yaniv may be CALLED, nothing else. */
 export type Threshold = 5 | 7 | 11;
 
+/** The levels a table can pick, in display order. */
+export const THRESHOLDS: readonly Threshold[] = [5, 7, 11];
+
 /**
  * A player as configured at setup. `seat` is a stable index assigned in the
  * order players were added; it defines the fixed circular clockwise order used

@@ -13,7 +13,7 @@
  *  - History is the single source of truth; we never patch totals in place.
  */
 
-import type { GameSettings, Player, RoundEntry } from '../engine';
+import type { GameSettings, Player, RoundEntry, Threshold } from '../engine';
 import type { AppState, StorageWarning } from './types';
 
 export type Action =
@@ -70,6 +70,13 @@ export type Action =
    * starts the next round, and the scoresheet column order cannot change.
    */
   | { type: 'SET_RING_ORDER'; order: string[] | undefined }
+  /**
+   * Change the Yaniv level (call threshold) mid-game. Settings-only: history is
+   * untouched. The level never feeds scoring, only the "above the threshold,
+   * sure?" prompt on round entry, so it simply applies from the next round
+   * entered. Same saved shape as before, just a different value.
+   */
+  | { type: 'SET_THRESHOLD'; threshold: Threshold }
   /** Manually end the game (move to the end screen). */
   | { type: 'END_GAME' }
   /** Reset everything back to a clean setup screen. */
@@ -261,6 +268,11 @@ export function reducer(state: AppState, action: Action): AppState {
       }
       return next;
     }
+
+    case 'SET_THRESHOLD':
+      if (state.settings === null) return state;
+      if (state.settings.threshold === action.threshold) return state;
+      return { ...state, settings: { ...state.settings, threshold: action.threshold } };
 
     case 'END_GAME':
       // Only meaningful mid-game; otherwise leave state untouched.

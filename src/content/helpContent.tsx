@@ -43,7 +43,8 @@ export function HowToUse() {
             <strong>Pick the Yaniv number</strong> (the threshold).{' '}
             <strong>7</strong> is the usual one; you can also choose{' '}
             <strong>5</strong> or <strong>11</strong>. This is the most a hand
-            can total for a player to call “Yaniv!”.
+            can total for a player to call “Yaniv!”. You can change it
+            mid-game with the “Yaniv” button under the title on the play screen.
           </li>
           <li>
             <strong>100-halving</strong> — leave this <strong>on</strong> for
@@ -402,8 +403,8 @@ export function HowToPlay() {
           </li>
           <li>
             <strong>Yaniv threshold of 5, 7, or 11.</strong> Most tables call
-            Yaniv at 7 or under. Some play a tighter 5, or a looser 11. Pick one
-            for the whole game.
+            Yaniv at 7 or under. Some play a tighter 5, or a looser 11. Agree one
+            before you start.
           </li>
           <li>
             <strong>Jokers wild in runs.</strong> Some tables let a joker stand

@@ -45,6 +45,7 @@ import { RoundEntry } from './RoundEntry';
 import { Callouts } from './Callouts';
 import { BigBoard } from './BigBoard';
 import { ConfirmDialog } from './ConfirmDialog';
+import { YanivLevelDialog } from './YanivLevelDialog';
 import { RearrangeSeats } from './RearrangeSeats';
 import { ringSlots, MAX_RING_PLAYERS } from './ringLayout';
 import { reconcileRingOrder } from './ringOrder';
@@ -53,8 +54,17 @@ import { seatColorVar, seatShape } from './seat';
 import './PlayScreen.css';
 
 export function PlayScreen() {
-  const { game, state, engineError, undoLastRound, endGame, addPlayer, removePlayer, resetGame } =
-    useStore();
+  const {
+    game,
+    state,
+    engineError,
+    undoLastRound,
+    endGame,
+    addPlayer,
+    removePlayer,
+    resetGame,
+    setThreshold,
+  } = useStore();
 
   const [entering, setEntering] = useState(false);
   const [showBoard, setShowBoard] = useState(false);
@@ -62,12 +72,14 @@ export function PlayScreen() {
   const [newName, setNewName] = useState('');
   const [rearranging, setRearranging] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [pickingLevel, setPickingLevel] = useState(false);
 
   // Both the confirmation dialog and the rearrange mode take the screen away
   // from the control that opened them, so focus must be handed back on the way
   // out or a keyboard / switch-access user is dumped at the top of the document
   // and has to traverse the whole top bar again (WCAG 2.4.3).
   const endGameRef = useRef<HTMLButtonElement | null>(null);
+  const levelRef = useRef<HTMLButtonElement | null>(null);
   const rearrangeRef = useRef<HTMLButtonElement | null>(null);
   // Set while leaving the rearrange mode, so the effect below knows to restore
   // focus once the trigger is back in the document.
@@ -181,12 +193,29 @@ export function PlayScreen() {
       <Callouts game={game} />
 
       <div className="top-bar">
-        <span className="top-bar__title">
-          <span className="top-bar__glyph" aria-hidden="true">
-            🃏
+        {/* The Yaniv-level chip sits under the title, in the space the wrapped
+            right-hand cluster already leaves free, so it costs no height and
+            shows in both the circle and Big Board views. */}
+        <div className="top-bar__lead">
+          <span className="top-bar__title">
+            <span className="top-bar__glyph" aria-hidden="true">
+              🃏
+            </span>
+            YANIV
           </span>
-          YANIV
-        </span>
+          {state.settings !== null && (
+            <button
+              ref={levelRef}
+              type="button"
+              className="btn btn--ghost play__level"
+              aria-label={`Yaniv ${state.settings.threshold}, change the Yaniv level`}
+              aria-haspopup="dialog"
+              onClick={() => setPickingLevel(true)}
+            >
+              Yaniv {state.settings.threshold}
+            </button>
+          )}
+        </div>
         <div className="top-bar__controls">
           <HelpButton />
           <ScreenAwakeToggle />
@@ -296,6 +325,18 @@ export function PlayScreen() {
             <span className="play__actions-label">End</span>
           </button>
         </div>
+      )}
+
+      {pickingLevel && state.settings !== null && (
+        <YanivLevelDialog
+          current={state.settings.threshold}
+          returnFocusTo={levelRef.current}
+          onCancel={() => setPickingLevel(false)}
+          onSave={(t) => {
+            setPickingLevel(false);
+            setThreshold(t);
+          }}
+        />
       )}
 
       {/* Ending the game cannot be undone (undo covers only the most recent

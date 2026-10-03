@@ -2,6 +2,7 @@ export { recompute } from './engine';
 export { removalPlan, type RemovalPlan } from './removal';
 export {
   EngineInputError,
+  THRESHOLDS,
   type EliminationEvent,
   type GameSettings,
   type GameState,

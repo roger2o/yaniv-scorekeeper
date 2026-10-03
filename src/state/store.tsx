@@ -27,6 +27,7 @@ import {
   recompute,
   removalPlan,
   type GameSettings,
+  type Threshold,
   type GameState,
   type RoundEntry,
 } from '../engine';
@@ -75,6 +76,8 @@ export interface StoreActions {
    * starts the next round, and the scoresheet column order cannot change.
    */
   setRingOrder: (order: string[] | undefined) => void;
+  /** Change the Yaniv level mid-game; applies from the next round entered. */
+  setThreshold: (threshold: Threshold) => void;
   endGame: () => void;
   resetGame: () => void;
 }
@@ -255,6 +258,7 @@ export function StoreProvider({ children, storage }: StoreProviderProps) {
       undoLastRound: () => dispatch({ type: 'UNDO_LAST_ROUND' }),
       editLastRound: (round) => dispatch({ type: 'EDIT_LAST_ROUND', round }),
       setRingOrder: (order) => dispatch({ type: 'SET_RING_ORDER', order }),
+      setThreshold: (threshold) => dispatch({ type: 'SET_THRESHOLD', threshold }),
       endGame: () => dispatch({ type: 'END_GAME' }),
       resetGame: () => {
         // Clearing storage on reset is best-effort and never throws.
