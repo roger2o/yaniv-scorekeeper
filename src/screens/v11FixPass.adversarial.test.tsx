@@ -1537,7 +1537,7 @@ describe('TWO-PLAYER boundary — one grip per player, and no arrows anywhere', 
 
   it('the two-player copy tells the scorekeeper to drag, and never mentions arrows', () => {
     const panel = renderPair();
-    expect(panel.textContent).toMatch(/Drag a player by the grip/);
+    expect(panel.textContent).toMatch(/Drag a player by the handle/);
     expect(panel.textContent).not.toMatch(/arrow/i);
     expect(panel.textContent).toMatch(/nearest the phone/i);
     expect(panel.textContent).not.toMatch(/\bdeal(er|s|ing)?\b/i);

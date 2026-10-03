@@ -16,9 +16,14 @@
 }
 
 /* --- Top bar: app name + theme toggle ------------------------------------ */
+/* The title lines up with the FIRST row of controls, not the whole cluster.
+   The cluster wraps to two rows on every phone (see .top-bar__controls), so
+   centring against all of it left "YANIV" floating in the gap between the round
+   buttons and the theme toggle. Instead the bar aligns to the top and the title
+   is given the round buttons' 56px height, centring its text within that. */
 .top-bar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 4px 0 12px;
@@ -27,6 +32,7 @@
 .top-bar__title {
   display: flex;
   align-items: center;
+  min-height: 56px;
   gap: 8px;
   font-family: var(--font-display);
   font-size: 1.25rem;

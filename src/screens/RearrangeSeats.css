@@ -1,6 +1,6 @@
 /*
  * Rearrange-seats mode. Mobile-first at 375px: one row per player, a position
- * badge on the left, the name in the middle, and 56px remove + drag-grip
+ * badge on the left, the name in the middle, and 56px remove + drag-handle
  * controls on the right.
  * Fully token-driven so both themes skin it; press feedback, focus rings,
  * hover-gating and reduced-motion all inherit from floor.css.
@@ -39,7 +39,7 @@
  *   lead + note     --ink-muted on --surface     6.75 /  5.72
  *   player name     --ink on --surface-raised    6.22 / 15.93
  *   position badge  --accent-ink on --accent     6.81 /  4.86
- *   grip + remove   --ink on --surface           8.47 / 15.05
+ *   handle + remove --ink on --surface           8.47 / 15.05
  *   "out" marker    --ink on --surface-raised    6.22 / 15.93
  * All clear the WCAG AA 4.5:1 small-text floor.
  *
@@ -48,7 +48,7 @@
  * there would be close to invisible rather than merely redundant. The word "out"
  * and the ✕ carry the meaning outright.
  *
- * The grip and remove buttons are outlined in --accent rather than a neutral border so their
+ * The handle and remove buttons are outlined in --accent rather than a neutral border so their
  * edge clears the 3:1 non-text bar against the row they sit on (--accent vs
  * --surface-raised: 3.03 / 4.86). The neutral tokens are nowhere near: --border
  * measures just 1.06:1 on the felt row and --border-strong 1.50:1.
@@ -76,10 +76,14 @@
 
 .rearrange__list {
   list-style: none;
-  margin: 8px 0 12px;
-  /* Right-hand padding leaves room for the scrollbar without clipping the
-     controls; the 2px top/bottom stops focus rings being cropped at the edges. */
-  padding: 2px 2px 2px 0;
+  margin: 8px 0 4px;
+  /* This list is a scroll box, so it CLIPS anything drawn outside it, sideways
+     as well as at the ends. The padding is the room the dragged row's lift
+     shadow and the focus rings need to stay visible on the first and last rows
+     and at both sides (see the dragging rule below for the arithmetic). The
+     bottom padding replaces 8px of the old bottom margin, so the gap to the
+     note below is unchanged. */
+  padding: 4px 4px 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -153,7 +157,7 @@
 }
 
 
-/* Row controls (grip, remove) are the primary controls of this screen, so they sit at the
+/* Row controls (handle, remove) are the primary controls of this screen, so they sit at the
    project's 56px touch-target floor. */
 .rearrange__move {
   display: inline-flex;
@@ -170,7 +174,7 @@
   font-weight: 800;
 }
 
-/* THE GRIP (drag handle). Same 56px face and --accent edge as the remove
+/* THE DRAG HANDLE. Same 56px face and --accent edge as the remove
    button. `touch-action: none` is what lets a finger drag it without the
    browser taking the gesture as a page scroll (which would also cancel the
    drag); `user-select: none` stops a long-press selecting the row text. */
@@ -182,21 +186,30 @@
   cursor: grab;
 }
 
-/* The row being dragged is LIFTED, not recoloured: a thicker accent outline
-   plus a shadow, so the state reads without relying on colour alone. */
+/* The row being dragged is LIFTED, not recoloured: a thick accent ring plus a
+   shadow, so the state reads without relying on colour alone.
+
+   The ring is drawn INSIDE the row (negative offset equal to its width, so it
+   sits over the row's own 2px border), never outside it. It used to sit 5px
+   outside the row, and the list is a scroll box that clips its overflow, so
+   the ring was cut off at both sides of every row and at the top of the first
+   and bottom of the last (Roger, on his phone, v1.3). The shadow is pulled in
+   by a negative spread so it reaches only 2px past the sides and 8px below
+   (blur 6 - spread 4, plus the 6px drop), which the list's 4px side and 10px
+   bottom padding hold in full. */
 .rearrange__row--dragging {
   position: relative;
   z-index: 2;
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
-  box-shadow: 0 8px 18px rgb(0 0 0 / 0.35);
+  outline: 4px solid var(--accent);
+  outline-offset: -4px;
+  box-shadow: 0 6px 6px -4px rgb(0 0 0 / 0.45);
 }
 
 .rearrange__row--dragging .rearrange__handle {
   cursor: grabbing;
 }
 
-/* REMOVE. Same 56px face and the same --accent edge as the grip, and
+/* REMOVE. Same 56px face and the same --accent edge as the handle, and
  * deliberately NO red: `--danger` measures 1.23:1 against the raised row on
  * Felt (the figure is in the "out" note above), so a red edge would fail the 3:1
  * non-text bar rather than merely being redundant. The minus glyph and the full
@@ -206,10 +219,10 @@
  *
  * WIDTH, arithmetic from these rules rather than measured (jsdom has no layout
  * engine, so no test here can check it — the file already asks for a real-device
- * pass at 375px). At 375px: .app-frame leaves 343px, the row's 10px padding
- * leaves 323px, the position badge takes 40px, the two row gaps 20px, and the
- * two controls (remove + grip) 118px (2 x 56 + 6) — so the name gets about
- * 145px. (It was about 83px with the old three-button row.) Long names wrap
+ * pass at 375px). At 375px: .app-frame leaves 343px, the list's 4px side
+ * padding leaves 335px, the row's 10px padding and 2px border leave 311px, the
+ * position badge takes 40px, the two row gaps 20px, and the two controls
+ * (remove + handle) 118px (2 x 56 + 6) — so the name gets about 133px. (It was about 83px with the old three-button row.) Long names wrap
  * rather than truncate. */
 .rearrange__move--remove {
   font-size: 1.6rem;

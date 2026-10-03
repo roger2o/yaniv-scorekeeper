@@ -23,7 +23,7 @@
  *    arrows on screen).
  *  - Each row shows the POSITION the player will occupy, on screen and in the
  *    row's screen-reader text, plus their "out" state if they are knocked out.
- *  - Every keyboard move, and every drop, is announced through a polite
+ *  - Every keyboard move, and every drop that changes the order, is announced through a polite
  *    aria-live region, following the pattern the round callouts and the
  *    scoresheet already use.
  *  - Keyboard moves WRAP around the ring, because a table is a circle. A wrap is
@@ -216,6 +216,9 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
   // crosses the midpoints of the other rows.
   const [dragging, setDragging] = useState<string | null>(null);
   const dragPointer = useRef<number | null>(null);
+  // Where the dragged player started, so a tap that moves nobody is not
+  // announced as a drop.
+  const dragStart = useRef(-1);
   const draftRef = useRef(draft);
   draftRef.current = draft;
 
@@ -242,6 +245,7 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
       dragPointer.current = null;
       setDragging(null);
       const landed = draftRef.current.indexOf(dragging) + 1;
+      if (landed - 1 === dragStart.current) return;
       announce(
         `${nameOf(dragging)} dropped at position ${landed} of ${draftRef.current.length}.`,
       );
@@ -261,6 +265,7 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (dragPointer.current !== null) return; // one finger drags at a time
     dragPointer.current = e.pointerId;
+    dragStart.current = draftRef.current.indexOf(playerId);
     setDragging(playerId);
   };
 
@@ -306,13 +311,13 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
       <p className="rearrange__lead">
         {isPair ? (
           <>
-            Drag a player by the grip to change who sits nearest the phone, at
+            Drag a player by the handle to change who sits nearest the phone, at
             the bottom of the circle.
           </>
         ) : (
           <>
             Position 1 is whoever sits nearest the phone, at the bottom of the
-            circle. Then work round to their left. Drag each player by the grip.
+            circle. Then work round to their left. Drag each player by the handle.
           </>
         )}
       </p>
