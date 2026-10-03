@@ -32,6 +32,10 @@
  * it. (About 4px of horizontal scroll remains at 320px, from the title and the
  * controls together needing 308px of the 288px that width leaves.)
  *
+ * UPDATE 2026-10-03: Roger chose 50px round buttons matching the toggle height,
+ * replacing the 56px-floor reasoning above; the bar now measures 124px, still
+ * wrapped at every phone width.
+ *
  * STATE IS NEVER CARRIED BY COLOUR ALONE. The glyph is a different SHAPE in
  * every state (see AwakeGlyph.tsx) — a lit bulb while the screen is being held
  * awake, an unlit bulb while it is wanted but not in hand, a battery when the phone

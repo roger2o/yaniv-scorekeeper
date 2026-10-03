@@ -1,6 +1,7 @@
 /*
- * "?" Help entry-point button. A round, clearly-tappable control that meets the
- * 56px touch-target floor and sits in the top bar of the Play and Setup screens.
+ * "?" Help entry-point button. A round, clearly-tappable control that
+ * sits in the top bar of the Play and Setup screens. 50px round: Roger, 2026-10-03,
+ * chose them matching the toggle height (below the project's 56px tap floor).
  * Token-driven so it skins correctly in both themes. Press feedback, focus ring,
  * and hover-gating all inherit from floor.css.
  */
@@ -8,8 +9,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: var(--radius-pill);
   background: var(--surface-raised);
   color: var(--ink);

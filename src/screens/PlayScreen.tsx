@@ -191,8 +191,8 @@ export function PlayScreen() {
           YANIV
         </span>
         <div className="top-bar__controls">
-          <HelpButton />
           <ScreenAwakeToggle />
+          <HelpButton />
           <ThemeToggle />
         </div>
       </div>

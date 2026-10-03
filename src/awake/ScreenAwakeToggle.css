@@ -1,6 +1,7 @@
 /*
  * Keep-screen-on toggle. Shaped to match the "?" Help button it sits beside
- * (56px round, same 24px glyph box) so the top-bar cluster reads as one set of
+ * (50px round, same 24px glyph box; Roger, 2026-10-03, chose them matching the
+ * toggle height) so the top-bar cluster reads as one set of
  * controls. Press feedback, focus ring and hover-gating all inherit from
  * floor.css. Token-driven, so it skins correctly in both themes.
  *
@@ -55,8 +56,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: var(--radius-pill);
   background: var(--surface-raised);
   color: var(--ink);

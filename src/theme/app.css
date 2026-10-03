@@ -20,7 +20,8 @@
    The cluster wraps to two rows on every phone (see .top-bar__controls), so
    centring against all of it left "YANIV" floating in the gap between the round
    buttons and the theme toggle. Instead the bar aligns to the top and the title
-   is given the round buttons' 56px height, centring its text within that. */
+   is given the round buttons' height (50px — Roger, 2026-10-03, chose them
+   matching the toggle height), centring its text within that. */
 .top-bar {
   display: flex;
   align-items: flex-start;
@@ -32,7 +33,7 @@
 .top-bar__title {
   display: flex;
   align-items: center;
-  min-height: 56px;
+  min-height: 50px;
   gap: 8px;
   font-family: var(--font-display);
   font-size: 1.25rem;
@@ -74,6 +75,10 @@
  * page that no longer scrolls sideways on the three narrowest phones people
  * still use. Roger's decision is that the icon stays; this note is here so
  * nobody builds on the belief that the row fits.
+ *
+ * UPDATE 2026-10-03: the round buttons are now 50px (Roger chose them matching
+ * the toggle height), so the cluster needs 313px; re-measured, the bar is 124px
+ * and still wraps on Setup/Play at 320, 375 and 430px (one row needs 424px).
  *
  * `justify-content: flex-end` keeps a wrapped second row aligned under the first
  * rather than drifting left. */

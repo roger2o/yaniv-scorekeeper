@@ -130,6 +130,7 @@ The full design proposal — themes, layouts, and rationale — is in `docs/ui-d
 
 ## Current Status
 
+- **Top-bar round buttons resized and reordered (2026-10-03, Roger's request).** Keep-screen-on and Help are now 50px, the same height as the Felt/Arcade toggle, with keep-screen-on first. The toggle still wraps to a second row on Setup and Play at every phone width (one row needs 424px, a 430px phone gives 398px), so that part of the ask is open for Roger. 860 tests, clean build.
 - **Undo Round now asks first (2026-10-03, Roger's request).** The bottom-bar Undo Round button opens a confirmation in Roger's exact words, "Are you sure you want to undo the last round of scoring?", with Undo and Cancel. The stranded-player recovery panel's undo is unchanged. 860 tests, clean build.
 - **Coloured seat shapes removed (2026-10-03, Roger's request).** The coloured ●◆▲ marks before player names are gone from every screen; names alone identify players and get the width back. The six seat colours now only tint the confetti. 859 tests, clean build.
 - **v1.3 (2026-10-03): seats are reordered by dragging, and the screen-on "off" icon is a battery.** Both from Roger's James notes. Drag uses a six-dot grip, no arrows anywhere on screen (Roger). 857 tests, clean build; one Holmes review, no blockers, three follow-ups under Open Questions. Owed: Roger tries the drag on his phone.

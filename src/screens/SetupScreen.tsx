@@ -94,8 +94,8 @@ export function SetupScreen() {
           YANIV
         </span>
         <div className="top-bar__controls">
-          <HelpButton />
           <ScreenAwakeToggle />
+          <HelpButton />
           <ThemeToggle />
         </div>
       </div>

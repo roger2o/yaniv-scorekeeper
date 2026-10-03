@@ -1,6 +1,7 @@
 /**
  * HELP button — the "?" entry point shown in the top bar of the Play and Setup
- * screens. A clearly-tappable control (≥56px touch target, accessible label
+ * screens. A clearly-tappable round control (50px, matching the theme toggle's height —
+ * Roger, 2026-10-03; accessible label
  * "Help") that opens the HelpDialog and tracks its open/close state.
  *
  * The dialog is mounted only while open, so focus management (move-in on mount,
