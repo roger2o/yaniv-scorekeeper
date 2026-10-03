@@ -418,3 +418,103 @@ export function HowToPlay() {
     </div>
   );
 }
+
+/**
+ * INSTALL SECTIONS — "Install on Android" and "Install on iPhone / iPad".
+ * Shared by the landing page (as h2 cards) and the in-app Help (as h3 sections
+ * under How to Use), so the two can never drift apart. Copy is unchanged from
+ * the landing page. The landing page's early "open this in Safari" banner for
+ * iPhone visitors in another browser is NOT part of this — it stays on the
+ * landing page only. Styles live in helpProse.css.
+ */
+type InstallSectionProps = {
+  headingId: string;
+  headingLevel: 'h2' | 'h3';
+  sectionClassName?: string;
+  headingClassName?: string;
+};
+
+export function InstallAndroid({
+  headingId,
+  headingLevel: Heading,
+  sectionClassName,
+  headingClassName,
+}: InstallSectionProps) {
+  return (
+    <section className={sectionClassName} aria-labelledby={headingId}>
+      <Heading id={headingId} className={headingClassName}>
+        <span aria-hidden="true">🤖</span> Install on Android
+      </Heading>
+      <p className="landing__lead">Takes about 10 seconds. Use Chrome.</p>
+      <ol className="landing__steps">
+        <li>
+          Open this page in <strong>Chrome</strong>.
+        </li>
+        <li>
+          A bar or pop-up should appear at the bottom saying{' '}
+          <strong>“Install app”</strong> or{' '}
+          <strong>“Add to Home screen”</strong> — tap it.
+        </li>
+        <li>
+          If you don’t see it, tap the <strong>⋮ menu</strong> (top-right) and
+          choose <strong>“Install app”</strong> /{' '}
+          <strong>“Add to Home screen”</strong>.
+        </li>
+        <li>
+          Tap <strong>Install</strong> / <strong>Add</strong> to confirm.
+        </li>
+        <li>
+          Done — open <strong>Yaniv Scorekeeper</strong> from your home screen
+          like any app.
+        </li>
+      </ol>
+    </section>
+  );
+}
+
+export function InstallIos({
+  headingId,
+  headingLevel: Heading,
+  sectionClassName,
+  headingClassName,
+}: InstallSectionProps) {
+  return (
+    <section className={sectionClassName} aria-labelledby={headingId}>
+      <Heading id={headingId} className={headingClassName}>
+        <span aria-hidden="true">🍎</span> Install on iPhone / iPad —{' '}
+        <span className="landing__h2-warn">Safari only</span>
+      </Heading>
+      <div className="landing__warn" role="note" data-testid="ios-safari-warning">
+        <span className="landing__warn-glyph" aria-hidden="true">
+          ⚠
+        </span>
+        <span>
+          <strong>Important: on iPhone and iPad you must use Safari.</strong>{' '}
+          Chrome and other browsers can’t add this app to your home screen on
+          Apple devices — only Safari can. If you’re reading this in another
+          browser, copy the link into Safari first.
+        </span>
+      </div>
+      <ol className="landing__steps">
+        <li>
+          Open this page in <strong>Safari</strong>.
+        </li>
+        <li>
+          Tap the <strong>Share button</strong> — the square with an arrow
+          pointing up (at the bottom of the screen on iPhone, top on iPad).
+        </li>
+        <li>
+          Scroll down the list and tap{' '}
+          <strong>“Add to Home Screen”</strong>.
+        </li>
+        <li>
+          Tap <strong>Add</strong> (top-right).
+        </li>
+        <li>
+          Done — open <strong>Yaniv Scorekeeper</strong> from your home screen
+          like any app.
+        </li>
+      </ol>
+    </section>
+  );
+}

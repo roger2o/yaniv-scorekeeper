@@ -154,3 +154,9 @@
   text-decoration: underline;
   word-break: break-all;
 }
+
+/* The install sections follow How to Use in the same tab; give them the same
+   gap a new prose section gets. */
+.help-install {
+  margin-top: 18px;
+}

@@ -136,6 +136,14 @@ describe('Help — content of both tabs', () => {
     expect(screen.getByText(/your 6 \+ the 30 penalty/i)).toBeTruthy();
   });
 
+  it('How to Use also carries the Android and iPhone install steps', () => {
+    renderSetup();
+    fireEvent.click(screen.getByRole('button', { name: 'Help' }));
+    expect(screen.getByRole('heading', { name: /Install on Android/ })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Install on iPhone \/ iPad/ })).toBeTruthy();
+    expect(screen.getByText(/on iPhone and iPad you must use Safari/i)).toBeTruthy();
+  });
+
   it('uses correct terminology — "starts the next round", never "deals/dealer"', () => {
     renderSetup();
     fireEvent.click(screen.getByRole('button', { name: 'Help' }));

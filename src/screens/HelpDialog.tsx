@@ -2,7 +2,8 @@
  * HELP dialog — the in-app Help screen (Phase 8 brief item).
  *
  * A modal dialog carrying TWO clearly-labelled tabs:
- *   - "How to Use"  (Section A — operating the scorekeeper)
+ *   - "How to Use"  (Section A — operating the scorekeeper, then the shared
+ *                    Install on Android / iPhone sections)
  *   - "How to Play" (Section B — the rules of Yaniv)
  * plus a "Share this app" action. The prose lives in the single-source
  * content blocks (src/content/helpContent.tsx) so the in-app Help and the
@@ -29,7 +30,7 @@
  */
 
 import { useRef, useState } from 'react';
-import { HowToUse } from '../content/helpContent';
+import { HowToUse, InstallAndroid, InstallIos } from '../content/helpContent';
 import { HowToPlay } from '../content/helpContent';
 import { ModalLayer } from './modal';
 import { useModalDialog } from './useModalDialog';
@@ -201,7 +202,18 @@ function HelpDialogBody({ onClose, returnFocusTo }: HelpDialogProps) {
             hidden={active !== 'use'}
             tabIndex={0}
           >
-            {active === 'use' && <HowToUse />}
+            {active === 'use' && (
+              <>
+                <HowToUse />
+                {/* Install steps, shared word for word with the landing page,
+                    for a friend who is handed the phone or a scorekeeper on a
+                    new phone. Last, because most readers here already have it. */}
+                <div className="help-prose help-install">
+                  <InstallAndroid headingId="help-install-android" headingLevel="h3" />
+                  <InstallIos headingId="help-install-ios" headingLevel="h3" />
+                </div>
+              </>
+            )}
           </div>
           <div
             role="tabpanel"
