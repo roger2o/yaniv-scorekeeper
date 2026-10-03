@@ -68,6 +68,7 @@ export function PlayScreen() {
   const [showBoard, setShowBoard] = useState(false);
   const [rearranging, setRearranging] = useState(false);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [confirmingUndo, setConfirmingUndo] = useState(false);
   const [pickingLevel, setPickingLevel] = useState(false);
 
   // Both the confirmation dialog and the rearrange mode take the screen away
@@ -75,6 +76,7 @@ export function PlayScreen() {
   // out or a keyboard / switch-access user is dumped at the top of the document
   // and has to traverse the whole top bar again (WCAG 2.4.3).
   const endGameRef = useRef<HTMLButtonElement | null>(null);
+  const undoRef = useRef<HTMLButtonElement | null>(null);
   const levelRef = useRef<HTMLButtonElement | null>(null);
   const rearrangeRef = useRef<HTMLButtonElement | null>(null);
   // Set while leaving the rearrange mode, so the effect below knows to restore
@@ -234,10 +236,12 @@ export function PlayScreen() {
             <span className="play__actions-label">Yaniv {state.settings!.threshold}</span>
           </button>
           <button
+            ref={undoRef}
             type="button"
             className="btn btn--secondary"
             aria-label="Undo round"
-            onClick={undoLastRound}
+            aria-haspopup="dialog"
+            onClick={() => setConfirmingUndo(true)}
             disabled={state.history.length === 0}
           >
             <span className="play__actions-label">↩ Undo Round</span>
@@ -274,6 +278,25 @@ export function PlayScreen() {
           onSave={(t) => {
             setPickingLevel(false);
             setThreshold(t);
+          }}
+        />
+      )}
+
+      {/* Undo throws away the last round's scores, so the bottom-bar button
+          asks first (Roger, 2026-10-03; his wording, verbatim). The stranded-
+          player recovery panel's undo stays one tap: it is already a deliberate
+          recovery step. */}
+      {confirmingUndo && (
+        <ConfirmDialog
+          testId="confirm-undo-round"
+          title="Are you sure you want to undo the last round of scoring?"
+          confirmLabel="Undo"
+          cancelLabel="Cancel"
+          returnFocusTo={undoRef.current}
+          onCancel={() => setConfirmingUndo(false)}
+          onConfirm={() => {
+            setConfirmingUndo(false);
+            undoLastRound();
           }}
         />
       )}

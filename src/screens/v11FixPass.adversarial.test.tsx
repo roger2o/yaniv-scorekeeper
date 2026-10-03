@@ -582,6 +582,7 @@ describe('PORTAL FREEZE — the app is never left permanently inert or scroll-lo
     expectFullyThawed('help closed');
 
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     // The engine now rejects the game and the recovery route is offered.
     fireEvent.click(screen.getByRole('button', { name: /Remove Eve/ }));
     expectFullyThawed('after the screen swapped underneath');
@@ -1081,6 +1082,7 @@ describe('FIX 2 — an unbounded arrangement is repaired once, not re-persisted 
     expect(JSON.parse(raw).state.ringOrder).toBeUndefined();
     // And it stays small across further play.
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     expect(storedRaw()!.length).toBeLessThan(2_000);
   });
 
@@ -1201,6 +1203,7 @@ describe('FIX 2 — the repair must never damage a LEGITIMATE arrangement', () =
     expect(ringIds()).toEqual(['e', 'd', 'a', 'c', 'b']);
     // Undo strands the joiner (she can no longer be placed); recovery removes her.
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     fireEvent.click(screen.getByRole('button', { name: /Remove Eve/ }));
     expect(ringIds()).toEqual(['d', 'a', 'c', 'b']);
     expect(JSON.parse(storedRaw()!).state.ringOrder).toEqual(['d', 'a', 'c', 'b']);
@@ -1273,6 +1276,7 @@ describe('FIX 2 — the repair must never damage a LEGITIMATE arrangement', () =
     render(<App />);
     expect(ringIds()).toEqual(['a', 'b', 'c', 'd']);
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     expect(Object.keys(storedState()).sort()).toEqual(['history', 'screen', 'settings']);
   });
 

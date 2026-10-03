@@ -212,6 +212,7 @@ describe('the combined count follows an undo', () => {
 
     // Ann's two calls: one successful, one caught.
     fireEvent.click(screen.getByRole('button', { name: 'Undo round' }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
 
     fireEvent.click(screen.getByTestId('finish'));
 

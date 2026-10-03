@@ -98,7 +98,19 @@ describe('PlayScreen — undo and standings', () => {
     expect(screen.getByTestId('history-len').textContent).toBe('1');
 
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     expect(screen.getByTestId('history-len').textContent).toBe('0');
+  });
+
+  it('cancelling the undo confirmation leaves the round in place', () => {
+    renderPlay(threePlayers(), [{ callerId: 'a', hands: { a: 3, b: 8, c: 12 } }]);
+    fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    expect(screen.getByTestId('confirm-undo-round').textContent).toContain(
+      'Are you sure you want to undo the last round of scoring?',
+    );
+    fireEvent.click(screen.getByTestId('confirm-undo-round-cancel'));
+    expect(screen.queryByTestId('confirm-undo-round')).toBeNull();
+    expect(screen.getByTestId('history-len').textContent).toBe('1');
   });
 
   it('renders the circle view for a small table', () => {

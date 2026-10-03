@@ -127,6 +127,7 @@ describe('PlayScreen — undo updates derived who-starts-next and standings', ()
 
     // Undo the last round.
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
 
     // Now we are back to the state after round 0: Ann starts next, totals 0/8/12.
     expect(screen.getByTestId('history-len').textContent).toBe('1');

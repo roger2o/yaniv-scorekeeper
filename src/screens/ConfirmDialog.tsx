@@ -33,8 +33,9 @@ import './ConfirmDialog.css';
 export interface ConfirmDialogProps {
   /** Short question heading, e.g. "End the game?". */
   title: string;
-  /** Plain-language consequence copy. */
-  children: ReactNode;
+  /** Plain-language consequence copy. Optional: when the title says it all,
+   *  the dialog has no body and no aria-describedby. */
+  children?: ReactNode;
   /** Label for the action itself, e.g. "End game". Never "OK". */
   confirmLabel: string;
   /** Label for the safe way out, e.g. "Keep playing". */
@@ -100,15 +101,17 @@ function ConfirmDialogBody({
       <div
         className="confirm-dialog"
         data-testid={testId}
-        aria-describedby={bodyId}
+        aria-describedby={children ? bodyId : undefined}
         {...dialogProps}
       >
         <h2 id={titleId} className="confirm-dialog__title">
           {title}
         </h2>
-        <p id={bodyId} className="confirm-dialog__body">
-          {children}
-        </p>
+        {children && (
+          <p id={bodyId} className="confirm-dialog__body">
+            {children}
+          </p>
+        )}
         <div className="confirm-dialog__actions">
           <button
             ref={cancelRef}

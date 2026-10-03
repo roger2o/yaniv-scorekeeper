@@ -511,7 +511,9 @@ describe('a departure is announced, and never leaves the game unusable', () => {
 
     // Undo twice, all the way back to an empty scoresheet.
     fireEvent.click(screen.getByRole('button', { name: 'Undo round' }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     fireEvent.click(screen.getByRole('button', { name: 'Undo round' }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     expect(screen.getByTestId('history-len').textContent).toBe('0');
 
     // Ann's departure could not be represented with nothing recorded, so it
@@ -546,6 +548,7 @@ describe('a departure is announced, and never leaves the game unusable', () => {
       { callerId: 'a', hands: { a: 3, b: 8, c: 12 } },
     ]);
     fireEvent.click(screen.getByRole('button', { name: 'Undo round' }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
 
     const banner = screen.getByRole('alert');
     expect(banner.textContent).toContain('before Dee joined');

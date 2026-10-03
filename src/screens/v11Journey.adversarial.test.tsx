@@ -181,6 +181,7 @@ describe('v1.1 upgrade — a game saved by the LIVE build survives the update en
 
     // 5. Undo it — back to the ORIGINAL saved round, arrangement intact.
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     expect(JSON.parse(storedRaw()!).state.history).toHaveLength(1);
     expect(ringIds()).toEqual(['b', 'a', 'c', 'd']);
 
@@ -629,6 +630,7 @@ describe('Rearrange — play a round then undo behaves exactly as if nothing was
     };
 
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
     const afterUndo = {
       history: screen.getByTestId('history-json').textContent,
       totals: screen.getByTestId('totals').textContent,
@@ -708,6 +710,7 @@ describe('Rearrange — combined with the player set changing', () => {
     const joinerId = ringIds()[4]!;
 
     fireEvent.click(screen.getByRole('button', { name: /Undo round/ }));
+    fireEvent.click(screen.getByTestId('confirm-undo-round-confirm'));
 
     // The engine now rejects the game and the recovery button is offered.
     const removeBtn = screen.getByRole('button', { name: /Remove Eve/ });
