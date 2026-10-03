@@ -192,8 +192,8 @@ export function PlayScreen() {
         </span>
         <div className="top-bar__controls">
           <ScreenAwakeToggle />
-          <HelpButton />
           <ThemeToggle />
+          <HelpButton />
         </div>
       </div>
 
@@ -266,7 +266,7 @@ export function PlayScreen() {
             aria-haspopup="dialog"
             onClick={() => setConfirmingEnd(true)}
           >
-            <span className="play__actions-label">End</span>
+            <span className="play__actions-label">End Game</span>
           </button>
         </div>
 

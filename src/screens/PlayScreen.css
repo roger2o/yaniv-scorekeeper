@@ -5,7 +5,8 @@
   /* Square ring that scales with width, capped so it fits a phone screen. */
   aspect-ratio: 1 / 1;
   max-height: 64vh;
-  margin: 0 auto 12px;
+  /* 12px above: breathing room under the header (Roger, 2026-10-03). */
+  margin: 12px auto 12px;
   background: radial-gradient(
     circle at 50% 50%,
     var(--surface-raised),
@@ -137,7 +138,8 @@
 .play__view-switch {
   display: flex;
   justify-content: center;
-  margin: 4px 0 12px;
+  /* 24px below: clear separation from the four action buttons (Roger, 2026-10-03). */
+  margin: 4px 0 24px;
 }
 
 .play__view-switch .btn {
@@ -200,6 +202,14 @@
   min-height: 50px;
   padding: 0 10px;
   font-size: 0.95rem;
+}
+
+/* The two every-round buttons keep their raised fill but drop the yellow accent
+   edge (Roger, 2026-10-03): only New Round, the one primary action, wears the
+   accent here. The muted-ink edge is the same one the ghost buttons use, so the
+   boundary still clears 3:1. */
+.play__actions .btn--secondary {
+  border-color: var(--ink-muted);
 }
 
 /* Relax to a single row on wider screens. Ordered after the rule above because both

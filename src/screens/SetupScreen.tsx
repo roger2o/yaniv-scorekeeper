@@ -95,8 +95,8 @@ export function SetupScreen() {
         </span>
         <div className="top-bar__controls">
           <ScreenAwakeToggle />
-          <HelpButton />
           <ThemeToggle />
+          <HelpButton />
         </div>
       </div>
 

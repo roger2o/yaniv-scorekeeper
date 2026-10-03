@@ -200,7 +200,7 @@ describe('PlayScreen — the four action buttons form one row group', () => {
       Array.from(actions.querySelectorAll('.play__actions-label')).map(
         (l) => l.textContent,
       ),
-    ).toEqual(['Yaniv 7', '↩ Undo Round', '⇄ Seats', 'End']);
+    ).toEqual(['Yaniv 7', '↩ Undo Round', '⇄ Seats', 'End Game']);
   });
 
   it('keeps the FULL wording as the accessible name of every button', () => {
@@ -210,13 +210,13 @@ describe('PlayScreen — the four action buttons form one row group', () => {
     }
   });
 
-  it('"End" is NOT the accessible name of the game-ending control', () => {
+  it('a bare "End" is NOT the accessible name of the game-ending control', () => {
     renderPlay(threePlayers());
     // A screen reader or voice-control user must never be offered a bare "End" for
     // the one irreversible action on the screen.
     expect(screen.queryByRole('button', { name: 'End' })).toBeNull();
     const end = screen.getByRole('button', { name: 'End game' });
-    expect(end.textContent).toBe('End');
+    expect(end.textContent).toBe('End Game');
     expect(end.getAttribute('aria-label')).toBe('End game');
     // The visible text stays a substring of the accessible name (WCAG 2.5.3), so
     // "tap End" and "tap End game" both work by voice.
@@ -253,7 +253,7 @@ describe('PlayScreen — the four action buttons form one row group', () => {
 
   it('keeps the weight hierarchy: every-round controls prominent, End quiet', () => {
     renderPlay(threePlayers());
-    // Abbreviating "End game" to "End" must not make it visually dominant.
+    // The game-ending control must not be made visually dominant.
     for (const name of ['Yaniv 7, change the Yaniv level', 'Undo round']) {
       expect(screen.getByRole('button', { name }).className).toContain('btn--secondary');
     }
