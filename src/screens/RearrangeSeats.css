@@ -1,6 +1,7 @@
 /*
  * Rearrange-seats mode. Mobile-first at 375px: one row per player, a position
- * badge on the left, the name in the middle, and 56px move buttons on the right.
+ * badge on the left, the name in the middle, and 56px remove + drag-grip
+ * controls on the right.
  * Fully token-driven so both themes skin it; press feedback, focus rings,
  * hover-gating and reduced-motion all inherit from floor.css.
  *
@@ -38,7 +39,7 @@
  *   lead + note     --ink-muted on --surface     6.75 /  5.72
  *   player name     --ink on --surface-raised    6.22 / 15.93
  *   position badge  --accent-ink on --accent     6.81 /  4.86
- *   move + remove   --ink on --surface           8.47 / 15.05
+ *   grip + remove   --ink on --surface           8.47 / 15.05
  *   "out" marker    --ink on --surface-raised    6.22 / 15.93
  * All clear the WCAG AA 4.5:1 small-text floor.
  *
@@ -47,7 +48,7 @@
  * there would be close to invisible rather than merely redundant. The word "out"
  * and the ✕ carry the meaning outright.
  *
- * The move buttons are outlined in --accent rather than a neutral border so their
+ * The grip and remove buttons are outlined in --accent rather than a neutral border so their
  * edge clears the 3:1 non-text bar against the row they sit on (--accent vs
  * --surface-raised: 3.03 / 4.86). The neutral tokens are nowhere near: --border
  * measures just 1.06:1 on the felt row and --border-strong 1.50:1.
@@ -76,8 +77,8 @@
 .rearrange__list {
   list-style: none;
   margin: 8px 0 12px;
-  /* Right-hand padding leaves room for the scrollbar without clipping the move
-     buttons; the 2px top/bottom stops focus rings being cropped at the edges. */
+  /* Right-hand padding leaves room for the scrollbar without clipping the
+     controls; the 2px top/bottom stops focus rings being cropped at the edges. */
   padding: 2px 2px 2px 0;
   display: flex;
   flex-direction: column;
@@ -152,7 +153,7 @@
 }
 
 
-/* Move controls are the primary controls of this screen, so they sit at the
+/* Row controls (grip, remove) are the primary controls of this screen, so they sit at the
    project's 56px touch-target floor. */
 .rearrange__move {
   display: inline-flex;
@@ -169,31 +170,47 @@
   font-weight: 800;
 }
 
-/* The two-player case shows ONE labelled button instead of two arrows, so it
-   needs room for its text. */
-.rearrange__move--swap {
-  width: auto;
-  padding: 0 14px;
-  font-family: var(--font-display);
-  font-size: 0.95rem;
+/* THE GRIP (drag handle). Same 56px face and --accent edge as the remove
+   button. `touch-action: none` is what lets a finger drag it without the
+   browser taking the gesture as a page scroll (which would also cancel the
+   drag); `user-select: none` stops a long-press selecting the row text. */
+.rearrange__handle {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
 }
 
-/* REMOVE. Same 56px face and the same --accent edge as the move buttons, and
+/* The row being dragged is LIFTED, not recoloured: a thicker accent outline
+   plus a shadow, so the state reads without relying on colour alone. */
+.rearrange__row--dragging {
+  position: relative;
+  z-index: 2;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 0.35);
+}
+
+.rearrange__row--dragging .rearrange__handle {
+  cursor: grabbing;
+}
+
+/* REMOVE. Same 56px face and the same --accent edge as the grip, and
  * deliberately NO red: `--danger` measures 1.23:1 against the raised row on
  * Felt (the figure is in the "out" note above), so a red edge would fail the 3:1
  * non-text bar rather than merely being redundant. The minus glyph and the full
  * accessible name ("Remove <name> from the game") carry the meaning, which is
  * the same rule the rest of this screen follows. The glyph runs larger than the
- * arrows because a bare "−" at their size reads as a hyphen.
+ * other controls because a bare "−" at their size reads as a hyphen.
  *
  * WIDTH, arithmetic from these rules rather than measured (jsdom has no layout
  * engine, so no test here can check it — the file already asks for a real-device
  * pass at 375px). At 375px: .app-frame leaves 343px, the row's 10px padding
  * leaves 323px, the position badge takes 40px, the two row gaps 20px, and the
- * three controls 180px (3 x 56 + 2 x 6) — so the name gets about 83px. Long
- * names wrap onto a second line there, which is the behaviour this screen
- * already chose over truncation. The gaps above were tightened from 12px/8px to
- * 10px/6px to buy that name column 10px when the third control appeared. */
+ * two controls (remove + grip) 118px (2 x 56 + 6) — so the name gets about
+ * 145px. (It was about 83px with the old three-button row.) Long names wrap
+ * rather than truncate. */
 .rearrange__move--remove {
   font-size: 1.6rem;
   line-height: 1;

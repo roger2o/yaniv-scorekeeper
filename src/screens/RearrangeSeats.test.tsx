@@ -8,9 +8,11 @@
  *  - the ring DOES follow the new arrangement, and it survives a reload;
  *  - the Big Board scoresheet column order, who starts the next round, the
  *    engine's seat numbers, and the round history all stay EXACTLY as they were;
- * plus the accessible interaction: real buttons (no drag-and-drop needed), a
- * visible position per player, a polite announcement per move, and cancel
- * restoring the arrangement as it was on entering the mode.
+ * plus the interaction: drag-and-drop on a grip (since 2026-10-03, replacing the
+ * arrow buttons), with the same grip operable by ArrowUp/ArrowDown for keyboard
+ * and screen-reader users, a visible position per player, a polite announcement
+ * per move and per drop, and cancel restoring the arrangement as it was on
+ * entering the mode.
  */
 
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
@@ -178,14 +180,14 @@ describe('Rearrange seats — entering and leaving the mode', () => {
 
     // First, save a custom arrangement so cancelling has something to restore to.
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
     expect(ringOrderOnScreen()).toEqual(['b', 'a', 'c', 'd']);
 
     // Re-enter, shuffle, then cancel: the saved arrangement must be untouched.
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-later-c'));
-    fireEvent.click(screen.getByTestId('move-earlier-d'));
+    fireEvent.keyDown(screen.getByTestId('reorder-c'), { key: 'ArrowDown' });
+    fireEvent.keyDown(screen.getByTestId('reorder-d'), { key: 'ArrowUp' });
     fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }));
 
     expect(ringOrderOnScreen()).toEqual(['b', 'a', 'c', 'd']);
@@ -195,7 +197,7 @@ describe('Rearrange seats — entering and leaving the mode', () => {
   it('"Reset order" resets the draft and stores nothing', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
     expect(screen.getByTestId('stored-ring-order').textContent).toBe('b,a,c,d');
 
@@ -209,34 +211,36 @@ describe('Rearrange seats — entering and leaving the mode', () => {
   });
 });
 
-describe('Rearrange seats — accessible move controls (buttons, not gestures)', () => {
-  it('moves a player one place later and one place earlier', () => {
+describe('Rearrange seats — the grip: drag, or arrow keys when focused', () => {
+  it('ArrowDown / ArrowUp on the grip move a player one place later and earlier', () => {
     renderPlay(ONE_ROUND);
     const panel = openRearrange();
 
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     let rows = panel.querySelectorAll<HTMLElement>('.rearrange__row');
     expect(Array.from(rows).map((r) => r.dataset.player)).toEqual(['b', 'a', 'c', 'd']);
 
-    fireEvent.click(screen.getByTestId('move-earlier-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowUp' });
     rows = panel.querySelectorAll<HTMLElement>('.rearrange__row');
     expect(Array.from(rows).map((r) => r.dataset.player)).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  it('gives every control a full accessible name including the player', () => {
+  it('gives every grip a full accessible name including the player and position', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
     expect(
-      screen.getByRole('button', { name: 'Move Ann one place earlier' }),
+      screen.getByRole('button', {
+        name: 'Reorder Ann, position 1 of 4. Use arrow up and down to move.',
+      }),
     ).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Move Dee one place later' })).toBeTruthy();
+    // The arrow-key hint is for screen readers only: never in the tooltip.
+    expect(screen.getByTestId('reorder-d').getAttribute('title')).toBe('Drag to move Dee');
     // No control is ever disabled, so keyboard focus is never dropped mid-task.
     const moves = screen
       .getByTestId('rearrange-seats')
       .querySelectorAll<HTMLButtonElement>('.rearrange__move');
-    // THREE controls per row now — move earlier, move later, and remove — so
-    // 12 across four players.
-    expect(moves.length).toBe(12);
+    // TWO controls per row — remove and the grip — so 8 across four players.
+    expect(moves.length).toBe(8);
     for (const btn of Array.from(moves)) expect(btn.disabled).toBe(false);
   });
 
@@ -244,14 +248,50 @@ describe('Rearrange seats — accessible move controls (buttons, not gestures)',
     renderPlay(ONE_ROUND);
     const panel = openRearrange();
 
-    const earlierAnn = screen.getByTestId('move-earlier-a');
-    act(() => earlierAnn.focus());
-    fireEvent.click(earlierAnn);
+    const gripAnn = screen.getByTestId('reorder-a');
+    act(() => gripAnn.focus());
+    fireEvent.keyDown(gripAnn, { key: 'ArrowUp' });
 
     const rows = panel.querySelectorAll<HTMLElement>('.rearrange__row');
     expect(Array.from(rows).map((r) => r.dataset.player)).toEqual(['b', 'c', 'd', 'a']);
     // Focus stays on the same player's control, so repeated presses keep working.
-    expect(document.activeElement).toBe(screen.getByTestId('move-earlier-a'));
+    expect(document.activeElement).toBe(screen.getByTestId('reorder-a'));
+  });
+
+  it('DRAGGING the grip reorders the draft live, announces the drop, and Cancel still discards it', () => {
+    renderPlay(ONE_ROUND);
+    const panel = openRearrange();
+    const live = panel.querySelector('[role="status"]') as HTMLElement;
+    // jsdom has no layout, so give each row a 60px slot by its current position.
+    const rect = HTMLElement.prototype.getBoundingClientRect;
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      const pos = Number((this as HTMLElement).dataset.position ?? 1);
+      return { top: (pos - 1) * 60, height: 60, bottom: pos * 60 } as DOMRect;
+    };
+    try {
+      const order = () =>
+        Array.from(panel.querySelectorAll<HTMLElement>('.rearrange__row')).map(
+          (r) => r.dataset.player,
+        );
+      fireEvent.pointerDown(screen.getByTestId('reorder-a'), {
+        pointerId: 1,
+        pointerType: 'touch',
+        clientY: 30,
+      });
+      expect(panel.querySelector('.rearrange__row--dragging')?.getAttribute('data-player')).toBe('a');
+      // Past Bo's and Cy's midpoints (90, 150): Ann lands third, live.
+      fireEvent.pointerMove(window, { pointerId: 1, clientY: 160 });
+      expect(order()).toEqual(['b', 'c', 'a', 'd']);
+      fireEvent.pointerUp(window, { pointerId: 1, clientY: 160 });
+      expect(panel.querySelector('.rearrange__row--dragging')).toBeNull();
+      expect(live.textContent).toMatch(/Ann dropped at position 3 of 4/);
+    } finally {
+      HTMLElement.prototype.getBoundingClientRect = rect;
+    }
+    // Staged: nothing reached the ring, and Cancel throws the drag away.
+    expect(screen.getByTestId('stored-ring-order').textContent).toBe('');
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }));
+    expect(ringOrderOnScreen()).toEqual(['a', 'b', 'c', 'd']);
   });
 
   it('announces the starting order on entry, then each move concisely', () => {
@@ -264,11 +304,11 @@ describe('Rearrange seats — accessible move controls (buttons, not gestures)',
 
     // Per-move announcements are SHORT: re-reading the whole roster on every
     // press would be unusable for a control tapped a dozen times.
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     expect(live.textContent).toMatch(/Ann, position 2 of 4/);
     expect(live.textContent).not.toMatch(/Bo, Ann, Cy, Dee/);
 
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     expect(live.textContent).toMatch(/Ann, position 3 of 4/);
   });
 
@@ -278,12 +318,12 @@ describe('Rearrange seats — accessible move controls (buttons, not gestures)',
     const live = panel.querySelector('[role="status"]') as HTMLElement;
 
     // Ann is at position 1; "earlier" wraps her to the last seat.
-    fireEvent.click(screen.getByTestId('move-earlier-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowUp' });
     expect(live.textContent).toMatch(/Ann moved round to position 4 of 4/);
     expect(live.textContent).toMatch(/last seat before position 1/);
 
     // And back round the other way, to the seat nearest the phone.
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     expect(live.textContent).toMatch(/Ann moved round to position 1 of 4/);
     expect(live.textContent).toMatch(/nearest the phone/);
   });
@@ -324,7 +364,7 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
 
     // Rearrange: Ann moves right round to the last ring position.
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-earlier-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowUp' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
 
     // The RING reflects it...
@@ -341,7 +381,7 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
   it('keeps the "starts next" marker on the engine-chosen player wherever they sit', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-earlier-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowUp' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
 
     const ring = screen.getByTestId('ring-view');
@@ -362,7 +402,7 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
     const before = shapeOf('d');
 
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-earlier-d'));
+    fireEvent.keyDown(screen.getByTestId('reorder-d'), { key: 'ArrowUp' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
 
     expect(ringOrderOnScreen()).toEqual(['a', 'b', 'd', 'c']);
@@ -429,7 +469,7 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
   it('returns focus to the trigger after SAVING too', () => {
     renderPlay(ONE_ROUND);
     fireEvent.click(screen.getByRole('button', { name: /Rearrange seats/ }));
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
     expect(document.activeElement).toBe(
       screen.getByRole('button', { name: /Rearrange seats/ }),
@@ -463,15 +503,11 @@ describe('Rearrange seats — the two-player case', () => {
     );
   }
 
-  it('shows ONE "Swap seats" button per row, not two arrows that do the same thing', () => {
+  it('shows one grip per row and no separate swap button', () => {
     renderPair();
     const panel = openRearrange();
-    // With two players, "one place earlier" and "one place later" are the same
-    // move, so two controls would be two ways to do one thing.
-    expect(panel.querySelectorAll('.rearrange__move').length).toBe(2);
-    expect(screen.getAllByRole('button', { name: /^Swap seats/ }).length).toBe(2);
-    expect(screen.queryByTestId('move-later-a')).toBeNull();
-    expect(screen.queryByTestId('move-earlier-a')).toBeNull();
+    expect(panel.querySelectorAll('.rearrange__handle').length).toBe(2);
+    expect(screen.queryByRole('button', { name: /Swap seats/ })).toBeNull();
   });
 
   it('drops the "round the table" wording, which does not apply to two players', () => {
@@ -486,7 +522,7 @@ describe('Rearrange seats — the two-player case', () => {
     const panel = openRearrange();
     const live = panel.querySelector('[role="status"]') as HTMLElement;
 
-    fireEvent.click(screen.getByTestId('swap-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     expect(live.textContent).toMatch(/Swapped\. Ann is now position 2 of 2/);
 
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
@@ -548,7 +584,7 @@ describe('Rearrange seats — survives a refresh and a changing table', () => {
     const storage = new FakeStorage();
     const first = renderPlay(ONE_ROUND, storage);
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
     expect(ringOrderOnScreen()).toEqual(['b', 'a', 'c', 'd']);
     first.unmount();
@@ -567,7 +603,7 @@ describe('Rearrange seats — survives a refresh and a changing table', () => {
   it('a mid-game join joins the END of the ring without disturbing the arrangement', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-earlier-d'));
+    fireEvent.keyDown(screen.getByTestId('reorder-d'), { key: 'ArrowUp' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
     expect(ringOrderOnScreen()).toEqual(['a', 'b', 'd', 'c']);
 

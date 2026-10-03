@@ -108,7 +108,7 @@ describe('Rematch — the seating arrangement survives into the new game', () =>
 
     // Rearrange: Dee moves up one, giving Ann, Bo, Dee, Cy.
     fireEvent.click(screen.getByRole('button', { name: /Rearrange seats/ }));
-    fireEvent.click(screen.getByTestId('move-earlier-d'));
+    fireEvent.keyDown(screen.getByTestId('reorder-d'), { key: 'ArrowUp' });
     fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
     expect(ringNames()).toEqual(['Ann', 'Bo', 'Dee', 'Cy']);
 

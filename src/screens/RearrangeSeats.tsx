@@ -7,22 +7,28 @@
  * column order, and who starts the next round are all untouched (see
  * ringOrder.ts for the full contract).
  *
- * INTERACTION: accessible BUTTONS, not drag-and-drop. Dragging chips around a
- * rotated ring on a phone is fiddly and is a dead end for keyboard and
- * screen-reader users, so the primary (and only) path is a list with a
- * move-earlier / move-later control per player:
- *  - Every control is a real button with a full accessible name that includes the
- *    player's name, so it is usable by keyboard and by screen reader.
+ * INTERACTION: DRAG AND DROP, with a keyboard route on the same control.
+ * This screen first shipped with move-earlier / move-later arrow buttons, chosen
+ * over drag for accessibility. Roger reversed that on 2026-10-03: the arrows read
+ * as confusing at the table, so there are no arrows anywhere on this screen now.
+ *  - Each row has a GRIP (six dots, deliberately not an arrow). Dragging it with
+ *    a finger or mouse reorders the list live; native Pointer Events, no library.
+ *    The grip has `touch-action: none`, so dragging it never scrolls the page.
+ *    Move/up listeners go on the WINDOW for the length of the drag, so the drag
+ *    survives React moving the dragged row's DOM node (which would otherwise
+ *    release pointer capture on some browsers).
+ *  - The grip is a real, focusable button. ArrowUp / ArrowDown move the player
+ *    one place, for keyboard and screen-reader users. That hint lives ONLY in
+ *    the accessible name, never in visible text or the tooltip (Roger: no
+ *    arrows on screen).
  *  - Each row shows the POSITION the player will occupy, on screen and in the
  *    row's screen-reader text, plus their "out" state if they are knocked out.
- *  - Every move is announced through a polite aria-live region, following the
- *    pattern the round callouts and the scoresheet already use.
- *  - Moves WRAP around the ring, because a table is a circle and because it means
- *    no control is ever disabled, so keyboard focus is never dropped mid-task. A
- *    wrap is called out in the announcement, since it is the one move where the
- *    player travels the whole length of the list.
- *  - AT TWO PLAYERS both directions are the same move, so the row shows a single
- *    "Swap seats" button rather than two buttons that would do the same thing.
+ *  - Every keyboard move, and every drop, is announced through a polite
+ *    aria-live region, following the pattern the round callouts and the
+ *    scoresheet already use.
+ *  - Keyboard moves WRAP around the ring, because a table is a circle. A wrap is
+ *    called out in the announcement, since the player travels the whole list.
+ *  - Two players use the same grip; there is no separate "Swap seats" button.
  *  - Nothing is applied until "Save order". Cancel simply discards the draft, so
  *    the arrangement is exactly as it was on entering the mode.
  *
@@ -30,7 +36,7 @@
  * and it deliberately breaks the staged model above: it applies IMMEDIATELY,
  * behind its own confirmation, and Cancel does not bring the player back (Cancel
  * only discards the ORDERING draft). It lives here because this is already the
- * "who is round the table" screen and the minus belongs beside the move buttons;
+ * "who is round the table" screen and the minus belongs beside the grip;
  * the confirmation copy is what carries the difference, and it never implies the
  * removal can be taken back. There is no bring-back control: someone returning
  * to the table comes back through "Add player" like any other mid-game join.
@@ -43,7 +49,14 @@
  * screen to fix, so the copy states the direction explicitly.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { removalPlan, type GameState, type RemovalPlan } from '../engine';
 import { useStore } from '../state';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -174,6 +187,83 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
     }
   };
 
+  // KEYBOARD: React reorders keyed rows by moving DOM nodes, and a browser drops
+  // focus from a node that is moved. So after a keyboard move, focus is put back
+  // on the same player's grip, letting repeated arrow presses keep working.
+  const listRef = useRef<HTMLOListElement | null>(null);
+  const refocusGrip = useRef<string | null>(null);
+  const gripFor = (playerId: string) =>
+    Array.from(
+      listRef.current?.querySelectorAll<HTMLButtonElement>('.rearrange__handle') ?? [],
+    ).find((el) => el.dataset.player === playerId);
+  useEffect(() => {
+    const id = refocusGrip.current;
+    if (id === null) return;
+    refocusGrip.current = null;
+    const grip = gripFor(id);
+    if (grip && document.activeElement !== grip) grip.focus();
+  }, [draft]);
+
+  const onGripKeyDown = (playerId: string, e: ReactKeyboardEvent) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    refocusGrip.current = playerId;
+    move(playerId, e.key === 'ArrowUp' ? -1 : 1);
+  };
+
+  // POINTER DRAG. `dragging` drives the lifted-row style; the window listeners
+  // live only while it is set. The draft is reordered live as the pointer
+  // crosses the midpoints of the other rows.
+  const [dragging, setDragging] = useState<string | null>(null);
+  const dragPointer = useRef<number | null>(null);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
+  useEffect(() => {
+    if (dragging === null) return;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerId !== dragPointer.current) return;
+      const rows = Array.from(
+        listRef.current?.querySelectorAll<HTMLElement>('.rearrange__row') ?? [],
+      ).filter((r) => r.dataset.player !== dragging);
+      // The new index is how many OTHER rows sit above the pointer.
+      const to = rows.filter((r) => {
+        const b = r.getBoundingClientRect();
+        return b.top + b.height / 2 < e.clientY;
+      }).length;
+      const current = draftRef.current;
+      if (current.indexOf(dragging) === to) return;
+      const next = current.filter((id) => id !== dragging);
+      next.splice(to, 0, dragging);
+      setDraft(next);
+    };
+    const onEnd = (e: PointerEvent) => {
+      if (e.pointerId !== dragPointer.current) return;
+      dragPointer.current = null;
+      setDragging(null);
+      const landed = draftRef.current.indexOf(dragging) + 1;
+      announce(
+        `${nameOf(dragging)} dropped at position ${landed} of ${draftRef.current.length}.`,
+      );
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onEnd);
+    window.addEventListener('pointercancel', onEnd);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dragging]);
+
+  const onGripPointerDown = (playerId: string, e: ReactPointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    if (dragPointer.current !== null) return; // one finger drags at a time
+    dragPointer.current = e.pointerId;
+    setDragging(playerId);
+  };
+
   const useSetupOrder = () => {
     const next = [...seatOrderIds];
     setDraft(next);
@@ -216,13 +306,13 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
       <p className="rearrange__lead">
         {isPair ? (
           <>
-            Tap <strong>Swap seats</strong> to change who sits nearest the phone,
-            at the bottom of the circle.
+            Drag a player by the grip to change who sits nearest the phone, at
+            the bottom of the circle.
           </>
         ) : (
           <>
             Position 1 is whoever sits nearest the phone, at the bottom of the
-            circle. Then work round to their left.
+            circle. Then work round to their left. Drag each player by the grip.
           </>
         )}
       </p>
@@ -234,7 +324,7 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
         {announcement.text + '\u00a0'.repeat(announcement.seq % 2)}
       </div>
 
-      <ol className="rearrange__list" data-testid="rearrange-list">
+      <ol className="rearrange__list" data-testid="rearrange-list" ref={listRef}>
         {draft.map((playerId, index) => {
           // Reconciliation guarantees every draft id is a current player, so this
           // should be unreachable. It stays a NO-OP rather than a loud throw on
@@ -250,7 +340,9 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
           return (
             <li
               key={playerId}
-              className="rearrange__row"
+              className={
+                'rearrange__row' + (dragging === playerId ? ' rearrange__row--dragging' : '')
+              }
               data-player={playerId}
               data-position={position}
             >
@@ -292,41 +384,21 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
                     <span aria-hidden="true">−</span>
                   </button>
                 )}
-                {isPair ? (
-                  <button
-                    type="button"
-                    className="rearrange__move rearrange__move--swap"
-                    aria-label={`Swap seats, moving ${row.name} to position ${position === 1 ? 2 : 1}`}
-                    title="Swap seats"
-                    data-testid={`swap-${playerId}`}
-                    onClick={() => move(playerId, 1)}
-                  >
-                    <span aria-hidden="true">⇅</span> Swap seats
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="rearrange__move"
-                      aria-label={`Move ${row.name} one place earlier`}
-                      title={`Move ${row.name} one place earlier`}
-                      data-testid={`move-earlier-${playerId}`}
-                      onClick={() => move(playerId, -1)}
-                    >
-                      <span aria-hidden="true">↑</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="rearrange__move"
-                      aria-label={`Move ${row.name} one place later`}
-                      title={`Move ${row.name} one place later`}
-                      data-testid={`move-later-${playerId}`}
-                      onClick={() => move(playerId, 1)}
-                    >
-                      <span aria-hidden="true">↓</span>
-                    </button>
-                  </>
-                )}
+                {/* THE GRIP: drag to reorder; ArrowUp/ArrowDown when focused.
+                    Six dots, never an arrow (Roger, 2026-10-03). The arrow-key
+                    hint is in the accessible name only, not the tooltip. */}
+                <button
+                  type="button"
+                  className="rearrange__move rearrange__handle"
+                  aria-label={`Reorder ${row.name}, position ${position} of ${draft.length}. Use arrow up and down to move.`}
+                  title={`Drag to move ${row.name}`}
+                  data-testid={`reorder-${playerId}`}
+                  data-player={playerId}
+                  onPointerDown={(e) => onGripPointerDown(playerId, e)}
+                  onKeyDown={(e) => onGripKeyDown(playerId, e)}
+                >
+                  <GripGlyph />
+                </button>
               </span>
             </li>
           );
@@ -369,6 +441,20 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
         />
       )}
     </div>
+  );
+}
+
+/** Six dots in two columns: reads as "grab here", never as an arrow. */
+function GripGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" width={24} height={24} aria-hidden="true" focusable="false">
+      {[6, 12, 18].map((cy) => (
+        <g key={cy} fill="currentColor">
+          <circle cx="9" cy={cy} r="2" />
+          <circle cx="15" cy={cy} r="2" />
+        </g>
+      ))}
+    </svg>
   );
 }
 

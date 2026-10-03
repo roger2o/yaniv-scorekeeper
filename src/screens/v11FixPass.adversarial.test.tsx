@@ -1105,7 +1105,7 @@ describe('FIX 2 — an unbounded arrangement is repaired once, not re-persisted 
     const sizes: number[] = [];
     for (let i = 0; i < 40; i += 1) {
       openRearrange();
-      fireEvent.click(screen.getByTestId('move-later-a'));
+      fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
       saveOrder();
       sizes.push(storedRaw()!.length);
     }
@@ -1343,7 +1343,7 @@ describe('RESTORED GUARD — a new game never inherits the previous game’s arr
 
     // Rearrange and save, so there is definitely an arrangement to inherit.
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-later-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     saveOrder();
     expect(ringIds()).toEqual(['b', 'a', 'c', 'd']);
     expect(JSON.parse(storedRaw()!).state.ringOrder).toEqual(['b', 'a', 'c', 'd']);
@@ -1404,8 +1404,8 @@ describe('ENGINE ISOLATION (re-confirm) — dialogs and rearranging cannot reach
     fireEvent.click(endGameTrigger());
     fireEvent.click(screen.getByTestId('confirm-end-game-cancel'));
     openRearrange();
-    fireEvent.click(screen.getByTestId('move-later-a')); // b, a, c, d
-    fireEvent.click(screen.getByTestId('move-later-c')); // b, a, d, c
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' }); // b, a, c, d
+    fireEvent.keyDown(screen.getByTestId('reorder-c'), { key: 'ArrowDown' }); // b, a, d, c
     saveOrder();
 
     const after = storedState();
@@ -1449,16 +1449,17 @@ describe('ENGINE ISOLATION (re-confirm) — dialogs and rearranging cannot reach
 });
 
 // ===========================================================================
-// PART 8 — the two-player "Swap seats" control, tested harder than the edit
+// PART 8 — the two-player case: one grip per player, no arrows, no swap button
 // ===========================================================================
 
 /**
  * The fix pass edited two assertions in the first pass's own file, because the
- * two-arrow controls collapse to a single "Swap seats" button at two players. The
+ * two-arrow controls collapsed to a single "Swap seats" button at two players.
+ * Since 2026-10-03 there is neither: every row has one drag grip. The
  * edits preserved intent; these tests make the boundary harder to weaken again by
  * pinning BOTH what must exist and what must NOT.
  */
-describe('TWO-PLAYER boundary — one "Swap seats" control, and the arrows are really gone', () => {
+describe('TWO-PLAYER boundary — one grip per player, and no arrows anywhere', () => {
   function renderPair() {
     seed(
       save(
@@ -1477,14 +1478,12 @@ describe('TWO-PLAYER boundary — one "Swap seats" control, and the arrows are r
     return openRearrange();
   }
 
-  it('offers exactly one control per player, and no move-earlier/move-later arrows', () => {
+  it('offers exactly one control per player, and no arrow or swap buttons', () => {
     renderPair();
-    expect(screen.getByTestId('swap-a')).toBeTruthy();
-    expect(screen.getByTestId('swap-b')).toBeTruthy();
-    expect(screen.queryByTestId('move-earlier-a')).toBeNull();
-    expect(screen.queryByTestId('move-later-a')).toBeNull();
-    expect(screen.queryByTestId('move-earlier-b')).toBeNull();
-    expect(screen.queryByTestId('move-later-b')).toBeNull();
+    expect(screen.getByTestId('reorder-a')).toBeTruthy();
+    expect(screen.getByTestId('reorder-b')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Swap seats|one place/ })).toBeNull();
+    expect(screen.getByTestId('rearrange-list').textContent).not.toMatch(/[↑↓⇅↕]/);
     // Two rows, two controls — not four.
     const list = screen.getByTestId('rearrange-list');
     expect(list.querySelectorAll('.rearrange__move')).toHaveLength(2);
@@ -1492,22 +1491,22 @@ describe('TWO-PLAYER boundary — one "Swap seats" control, and the arrows are r
 
   it('either row swaps the pair, and a second press is a true round trip', () => {
     renderPair();
-    fireEvent.click(screen.getByTestId('swap-a'));
-    fireEvent.click(screen.getByTestId('swap-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     saveOrder();
     // Back where it started, so nothing custom is stored at all.
     expect(ringIds()).toEqual(['a', 'b']);
     expect(JSON.parse(storedRaw()!).state.ringOrder).toBeUndefined();
 
     openRearrange();
-    fireEvent.click(screen.getByTestId('swap-b'));
+    fireEvent.keyDown(screen.getByTestId('reorder-b'), { key: 'ArrowDown' });
     saveOrder();
     expect(ringIds()).toEqual(['b', 'a']);
   });
 
   it('the swap changes the ring only — engine seats and the scoresheet are untouched', () => {
     renderPair();
-    fireEvent.click(screen.getByTestId('swap-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     saveOrder();
     expect(ringIds()).toEqual(['b', 'a']);
     const seats = (storedState().settings as GameSettings).players.map(
@@ -1525,20 +1524,21 @@ describe('TWO-PLAYER boundary — one "Swap seats" control, and the arrows are r
 
   it('both controls carry a full accessible name naming the player and the destination', () => {
     renderPair();
-    expect(screen.getByTestId('swap-a').getAttribute('aria-label')).toBe(
-      'Swap seats, moving Ann to position 2',
+    expect(screen.getByTestId('reorder-a').getAttribute('aria-label')).toBe(
+      'Reorder Ann, position 1 of 2. Use arrow up and down to move.',
     );
-    expect(screen.getByTestId('swap-b').getAttribute('aria-label')).toBe(
-      'Swap seats, moving Bo to position 1',
+    expect(screen.getByTestId('reorder-b').getAttribute('aria-label')).toBe(
+      'Reorder Bo, position 2 of 2. Use arrow up and down to move.',
     );
     // And the swap is announced through the live region.
-    fireEvent.click(screen.getByTestId('swap-a'));
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     expect(screen.getByRole('status').textContent).toMatch(/Swapped/i);
   });
 
-  it('the two-player copy tells the scorekeeper what "Swap seats" does', () => {
+  it('the two-player copy tells the scorekeeper to drag, and never mentions arrows', () => {
     const panel = renderPair();
-    expect(panel.textContent).toMatch(/Swap seats/);
+    expect(panel.textContent).toMatch(/Drag a player by the grip/);
+    expect(panel.textContent).not.toMatch(/arrow/i);
     expect(panel.textContent).toMatch(/nearest the phone/i);
     expect(panel.textContent).not.toMatch(/\bdeal(er|s|ing)?\b/i);
   });

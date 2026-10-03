@@ -47,9 +47,9 @@
  * means the scorekeeper has this switched ON and the phone is not holding it at
  * this moment (it is asked for again about a second later). So the BORDER carries
  * the intent — accent, same as `on` — while the hollow, unlit bulb carries the
- * reality. `off` is the opposite: a quiet grey edge and a moon, because nothing
+ * reality. `off` is the opposite: a quiet grey edge and a battery, because nothing
  * is wanted and nothing is happening. Neither state relies on that difference
- * alone: the shapes differ (unlit bulb vs moon) and so do the accessible names.
+ * alone: the shapes differ (unlit bulb vs battery) and so do the accessible names.
  */
 .awake-toggle {
   display: inline-flex;

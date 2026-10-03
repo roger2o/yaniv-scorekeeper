@@ -34,7 +34,7 @@
  *
  * STATE IS NEVER CARRIED BY COLOUR ALONE. The glyph is a different SHAPE in
  * every state (see AwakeGlyph.tsx) — a lit bulb while the screen is being held
- * awake, an unlit bulb while it is wanted but not in hand, a moon when the phone
+ * awake, an unlit bulb while it is wanted but not in hand, a battery when the phone
  * is free to sleep, a warning triangle when the phone has refused, a struck-out
  * bulb where the phone cannot do it at all. The fill reinforces the shape; it
  * never carries the meaning on its own.

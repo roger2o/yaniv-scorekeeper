@@ -122,7 +122,7 @@ function openRearrange() {
 
 /** Move a player one place later, by player id. */
 function moveLater(playerId: string) {
-  fireEvent.click(screen.getByTestId(`move-later-${playerId}`));
+  fireEvent.keyDown(screen.getByTestId(`reorder-${playerId}`), { key: 'ArrowDown' });
 }
 
 /** Switch to the vertical scoresheet (Big Board). */
@@ -776,9 +776,8 @@ describe('Rearrange — combined with the player set changing', () => {
       history: [],
     });
     openRearrange();
-    // At two players the row shows a single "Swap seats" control rather than two
-    // arrows that would perform the same move.
-    fireEvent.click(screen.getByTestId('swap-a'));
+    // At two players the same grip swaps the pair.
+    fireEvent.keyDown(screen.getByTestId('reorder-a'), { key: 'ArrowDown' });
     saveOrder();
     expect(ringIds()).toEqual(['b', 'a']);
     expect(screen.getByTestId('seats').textContent).toBe('a:0|b:1');
@@ -862,10 +861,10 @@ describe('Local-storage trust boundary — nothing stored is ever rendered unesc
     const panel = openRearrange();
     expect(panel.querySelector('b')).toBeNull();
     expect(panel.textContent).toContain(payload);
-    // Two players -> the single "Swap seats" control; its label carries the name.
-    const btn = screen.getByTestId('swap-a');
+    // The grip's accessible name carries the name, as inert text.
+    const btn = screen.getByTestId('reorder-a');
     expect(btn.getAttribute('aria-label')).toBe(
-      `Swap seats, moving ${payload} to position 2`,
+      `Reorder ${payload}, position 1 of 2. Use arrow up and down to move.`,
     );
   });
 });

@@ -28,7 +28,7 @@
  * A path in the bundle cannot go missing offline and cannot be substituted.
  *
  * MEANING WITHOUT COLOUR. The five shapes are deliberately different SHAPES, not
- * five colours of the same shape: a lit bulb, a hollow bulb, a moon, a warning
+ * five colours of the same shape: a lit bulb, a hollow bulb, a battery, a warning
  * triangle, a hollow bulb struck through. Read in a single colour, they still say
  * which state the control is in.
  */
@@ -144,13 +144,24 @@ export function AwakeGlyph({ state }: { state: AwakeVisualState }) {
     );
   }
 
-  // 'off' — the phone may sleep normally, by the scorekeeper's own choice.
+  // 'off' — the phone may sleep normally, by the scorekeeper's own choice,
+  // which saves battery. A battery on its side (outlined body, terminal nub,
+  // one solid cell): a different SHAPE from every bulb and from the triangle.
+  // (This was a moon until 2026-10-03; Roger asked for a bulb or battery.)
   return (
     <svg {...SVG_PROPS}>
-      <path
-        d="M21.2 13.6A9.2 9.2 0 1 1 10.4 2.8 7.2 7.2 0 0 0 21.2 13.6Z"
-        fill="currentColor"
+      <rect
+        x="2"
+        y="7"
+        width="17"
+        height="10"
+        rx="2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
       />
+      <rect x="20" y="10" width="2.4" height="4" rx="0.8" fill="currentColor" />
+      <rect x="4.6" y="9.6" width="7" height="4.8" rx="0.8" fill="currentColor" />
     </svg>
   );
 }

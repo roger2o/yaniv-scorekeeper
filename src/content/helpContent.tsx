@@ -122,8 +122,8 @@ export function HowToUse() {
         <p>
           Tap <strong>Rearrange seats</strong> and put the list in the order
           everyone is sitting now. Position 1 is whoever sits nearest the phone,
-          then you work round to their left. Use the arrows to move a player up or
-          down, then tap <strong>Save order</strong>.
+          then you work round to their left. Drag each player into place by the
+          handle on their row, then tap <strong>Save order</strong>.
         </p>
         <p>
           This only changes the circle view, so it is always safe to use mid-game.
@@ -211,8 +211,8 @@ export function HowToUse() {
           screen on the whole time the app is open, so it doesn’t lock while a
           hand is being played and you don’t have to unlock it every round. It
           starts <strong>on</strong>. Tap it once and the bulb becomes a{' '}
-          <strong>moon</strong> — the phone then sleeps normally, which saves
-          battery.
+          <strong>battery</strong>, and the phone then sleeps normally to save
+          power.
         </p>
         <p>
           Like the theme, it’s a per-phone preference and it never affects

@@ -290,7 +290,7 @@ describe('a removal applies immediately, outside the staged ordering draft', () 
     // Move Cy one place later (so the order is a,b,d,c), then remove Bo. The
     // custom order must survive the removal rather than collapsing back to the
     // engine's seat order.
-    fireEvent.click(screen.getByTestId('move-later-c'));
+    fireEvent.keyDown(screen.getByTestId('reorder-c'), { key: 'ArrowDown' });
     removeThroughUi('b');
     fireEvent.click(screen.getByRole('button', { name: 'Save order' }));
     const stored = screen.getByTestId('stored-ring-order').textContent!;
