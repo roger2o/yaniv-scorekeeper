@@ -37,7 +37,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { GameState, ResolvedRound } from '../engine';
-import { seatColorVar, seatShape } from './seat';
 import { leaderIdOf } from './leader';
 import './BigBoard.css';
 
@@ -181,12 +180,6 @@ export function BigBoard({ game }: { game: GameState }) {
                   title={p.name}
                 >
                   <span className="scoresheet__player-name">
-                    <span
-                      style={{ color: seatColorVar(p.seat) }}
-                      aria-hidden="true"
-                    >
-                      {seatShape(p.seat)}
-                    </span>{' '}
                     <span className="scoresheet__player-name-text">{p.name}</span>
                   </span>
                   {isLeader && (

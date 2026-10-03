@@ -66,7 +66,7 @@ function Harness() {
  * because a rematch regenerates every id — which is exactly why the arrangement
  * has to be carried across by seat.
  *
- * The seat shape glyph and any leader/out markers are stripped so the assertion
+ * Any leader/out markers are stripped so the assertion
  * is about seating order alone.
  */
 function ringNames(): string[] {
@@ -78,7 +78,7 @@ function ringNames(): string[] {
     )
     .map((chip) =>
       (chip.querySelector('.chip__name')?.textContent ?? '')
-        .replace(/[\u25cf\u25c6\u25b2\u25a0\u2605\u2b1f\u{1F451}]/gu, '')
+        .replace(/\u{1F451}/gu, '')
         .replace(/leader/gi, '')
         .trim(),
     );

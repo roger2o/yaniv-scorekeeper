@@ -65,7 +65,6 @@ import {
 import { removalPlan, type GameState, type RemovalPlan } from '../engine';
 import { useStore } from '../state';
 import { ConfirmDialog } from './ConfirmDialog';
-import { seatColorVar, seatShape } from './seat';
 import { isEngineSeatOrder, reconcileRingOrder } from './ringOrder';
 import './RearrangeSeats.css';
 
@@ -393,9 +392,6 @@ export function RearrangeSeats({ game, onDone }: RearrangeSeatsProps) {
                 {position}
               </span>
               <span className="rearrange__who">
-                <span style={{ color: seatColorVar(row.seat) }} aria-hidden="true">
-                  {seatShape(row.seat)}
-                </span>{' '}
                 <span className="rearrange__name">{row.name}</span>
                 {row.eliminated && (
                   <span className="rearrange__out">

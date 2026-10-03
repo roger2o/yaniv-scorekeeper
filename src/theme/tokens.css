@@ -38,8 +38,8 @@
  *   --focus-ring         focus-visible outline colour
  *   --scrim              dimming backdrop behind modal dialogs
  *   --radius / --radius-lg / --radius-pill   corner radii
- *   --seat-1 .. --seat-6 per-seat identity colours (paired w/ name + shape,
- *                        never colour-alone)
+ *   --seat-1 .. --seat-6 six decorative palette colours (confetti only;
+ *                        they identify nobody)
  *   --shadow             elevation shadow
  */
 
@@ -109,8 +109,8 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
 
-  /* Per-seat identity. On felt these are warm jewel tones; always paired with
-     name + shape, never colour-alone. Each clears 3:1 as a large icon/dot. */
+  /* Six-colour decorative palette (confetti). On felt these are warm jewel
+     tones. They carry no meaning; players are identified by name. */
   --seat-1: #e8b84b; /* gold */
   --seat-2: #d98a4a; /* amber */
   --seat-3: #6fae8f; /* sage */
@@ -185,8 +185,8 @@
   --radius-lg: 26px;
   --radius-pill: 999px;
 
-  /* Bold 6-swatch playful set. Always paired with name + shape, never
-     colour-alone; each validated >= 3:1 as a large-text/icon colour. */
+  /* Bold 6-swatch playful set, decorative only (confetti). Players are
+     identified by name, never by these colours. */
   --seat-1: #f2603c; /* coral */
   --seat-2: #1fa39b; /* teal */
   --seat-3: #7c5ccb; /* grape */

@@ -25,13 +25,6 @@
   gap: 10px;
 }
 
-.setup__seat-badge {
-  font-size: 1.2rem;
-  width: 24px;
-  text-align: center;
-  flex: none;
-}
-
 .setup__name-input {
   flex: 1;
   min-height: 52px;

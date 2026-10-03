@@ -1,24 +1,10 @@
 /**
- * Per-seat identity helpers shared across screens.
+ * Per-seat helpers shared across screens.
  *
- * Seat identity is conveyed by THREE redundant channels so it is never
- * colour-alone (WCAG): a colour token, a SHAPE glyph, and always the name.
- * Colours cycle through the six theme seat tokens; shapes cycle through six
- * distinct glyphs. Both wrap for >6 players (the colour repeats but the name +
- * position still disambiguate).
+ * Players are identified by NAME alone. The coloured seat shape that used to
+ * sit before each name was removed at Roger's request (2026-10-03): it added
+ * nothing the name did not already say and cost width on a narrow phone.
  */
-
-/** CSS custom-property name for a seat's colour, by seat index. */
-export function seatColorVar(seat: number): string {
-  return `var(--seat-${(seat % 6) + 1})`;
-}
-
-/** A distinct shape glyph per seat (paired with colour, never colour-alone). */
-const SEAT_SHAPES = ['●', '◆', '▲', '■', '★', '⬟'] as const;
-
-export function seatShape(seat: number): string {
-  return SEAT_SHAPES[seat % SEAT_SHAPES.length]!;
-}
 
 /**
  * Generate a stable player id INDEPENDENT of the name, so duplicate names can

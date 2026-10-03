@@ -21,7 +21,6 @@ import { useMemo, useState } from 'react';
 import { recompute, type GameState, type RoundEntry } from '../engine';
 import { useStore } from '../state';
 import { NumberPad } from './NumberPad';
-import { seatColorVar, seatShape } from './seat';
 import './RoundEntry.css';
 
 /** A total above this is flagged as implausible (soft, non-blocking). */
@@ -148,8 +147,6 @@ export function RoundEntry({ onDone }: RoundEntryProps) {
 
   const nameOf = (id: string) =>
     game.standings.find((s) => s.playerId === id)?.name ?? id;
-  const seatOf = (id: string) =>
-    game.standings.find((s) => s.playerId === id)?.seat ?? 0;
 
   // ---------------------------------------------------------------------------
   return (
@@ -183,13 +180,6 @@ export function RoundEntry({ onDone }: RoundEntryProps) {
                 className="entry__caller card-button"
                 onClick={() => chooseCaller(r.playerId)}
               >
-                <span
-                  className="entry__caller-shape"
-                  style={{ color: seatColorVar(r.seat) }}
-                  aria-hidden="true"
-                >
-                  {seatShape(r.seat)}
-                </span>
                 {r.name}
               </button>
             ))}
@@ -216,13 +206,6 @@ export function RoundEntry({ onDone }: RoundEntryProps) {
                     className="entry__roster-name"
                     onClick={() => setActiveFieldId(r.playerId)}
                   >
-                    <span
-                      className="entry__caller-shape"
-                      style={{ color: seatColorVar(r.seat) }}
-                      aria-hidden="true"
-                    >
-                      {seatShape(r.seat)}
-                    </span>
                     {r.name}
                     {isCaller && <span className="entry__called-tag">called Yaniv</span>}
                   </button>
@@ -325,13 +308,6 @@ export function RoundEntry({ onDone }: RoundEntryProps) {
                       {activeRows.map((r) => (
                         <tr key={r.playerId}>
                           <td>
-                            <span
-                              className="entry__caller-shape"
-                              style={{ color: seatColorVar(seatOf(r.playerId)) }}
-                              aria-hidden="true"
-                            >
-                              {seatShape(seatOf(r.playerId))}
-                            </span>{' '}
                             {r.name}
                           </td>
                           <td className="num">{hands[r.playerId]}</td>

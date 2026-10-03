@@ -391,24 +391,6 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
     expect(marked?.dataset.ringPosition).toBe('4');
   });
 
-  it('keeps each player’s seat colour and shape tied to their ENGINE seat', () => {
-    renderPlay(ONE_ROUND);
-    const shapeOf = (playerId: string) => {
-      const chip = screen
-        .getByTestId('ring-view')
-        .querySelector<HTMLElement>(`.chip[data-player="${playerId}"]`);
-      return chip?.querySelector('span[aria-hidden="true"]')?.textContent ?? '';
-    };
-    const before = shapeOf('d');
-
-    openRearrange();
-    fireEvent.keyDown(screen.getByTestId('reorder-d'), { key: 'ArrowUp' });
-    fireEvent.click(screen.getByRole('button', { name: /Save order/ }));
-
-    expect(ringOrderOnScreen()).toEqual(['a', 'b', 'd', 'c']);
-    expect(shapeOf('d')).toBe(before);
-  });
-
   it('tells the scorekeeper WHICH WAY round the table to go', () => {
     renderPlay(ONE_ROUND);
     const panel = openRearrange();
@@ -418,11 +400,10 @@ describe('Rearrange seats — the ring follows it, the engine does NOT', () => {
     expect(panel.textContent).toMatch(/work round to their left/i);
   });
 
-  it('uses move glyphs that cannot be confused with a seat shape', () => {
+  it('uses move glyphs that cannot be confused with the starts-next marker', () => {
     renderPlay(ONE_ROUND);
     openRearrange();
-    // Seat 2 (0-based) is the ▲ shape, and ▲ also means "starts next" on the
-    // ring, so the move controls must not reuse it.
+    // ▲ means "starts next" on the ring, so the move controls must not reuse it.
     const moves = screen
       .getByTestId('rearrange-seats')
       .querySelectorAll<HTMLElement>('.rearrange__move');

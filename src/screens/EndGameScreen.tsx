@@ -38,7 +38,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../state';
 import type { GameSettings } from '../engine';
 import { useTheme } from '../theme';
-import { makePlayerId, seatColorVar, seatShape } from './seat';
+import { makePlayerId } from './seat';
 import { leaderIdOf, lowestTotalId } from './leader';
 import { Confetti } from './Confetti';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -240,9 +240,6 @@ export function EndGameScreen() {
             >
               <td className="tabular">{i + 1}</td>
               <td>
-                <span style={{ color: seatColorVar(row.seat) }} aria-hidden="true">
-                  {seatShape(row.seat)}
-                </span>{' '}
                 {row.name}
                 {/* Their score is on the sheet, so the sheet has to say why it
                     did not win. Real text, no colour dependency. */}

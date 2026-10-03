@@ -53,10 +53,6 @@
     border-color var(--dur-base) var(--ease-out);
 }
 
-.entry__caller-shape {
-  font-size: 1.2rem;
-}
-
 /* --- Step 2: hand entry -------------------------------------------------- */
 .entry__roster {
   list-style: none;

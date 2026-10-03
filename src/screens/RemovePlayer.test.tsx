@@ -653,7 +653,7 @@ describe('#20 rematch and round entry after a departure', () => {
     // Step 1 is "who called": Bo must not be offered as the caller.
     const callers = Array.from(
       document.querySelectorAll('.entry__caller-grid .entry__caller'),
-      // The seat shape glyph is decorative; strip it to compare names.
+      // Letters only, so the comparison is about names alone.
     ).map((b) => (b.textContent ?? '').replace(/[^A-Za-z]/g, ''));
     expect(callers).toEqual(['Ann', 'Cy']);
   });

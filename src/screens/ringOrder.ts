@@ -13,8 +13,8 @@
  *    the ENGINE's seat order, so no past or future round resolves differently.
  *  - The Big Board / vertical scoresheet keeps its columns in ENGINE SEAT ORDER.
  *    It is the paper record; stable columns across the whole game are correct.
- *  - Each player's seat colour and shape still come from their ENGINE seat, so a
- *    player's identity travels with them when they move around the ring.
+ *  - A player is identified by name alone, so their identity travels with
+ *    them when they move around the ring.
  *
  * The arrangement is stored as a list of player ids. It is NEVER trusted blindly:
  * it is reconciled against the players actually on the table at render time (see

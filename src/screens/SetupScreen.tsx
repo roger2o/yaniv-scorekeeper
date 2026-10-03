@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from '../state';
 import { THRESHOLDS, type GameSettings, type Threshold } from '../engine';
-import { makePlayerId, seatColorVar, seatShape } from './seat';
+import { makePlayerId } from './seat';
 import { ThemeToggle } from '../theme';
 import { ScreenAwakeToggle } from '../awake';
 import { HelpButton } from './HelpButton';
@@ -113,13 +113,6 @@ export function SetupScreen() {
         <ul className="setup__players">
           {players.map((p, i) => (
             <li key={p.id} className="setup__player-row">
-              <span
-                className="setup__seat-badge"
-                style={{ color: seatColorVar(i) }}
-                aria-hidden="true"
-              >
-                {seatShape(i)}
-              </span>
               <input
                 ref={(el) => {
                   inputRefs.current[i] = el;

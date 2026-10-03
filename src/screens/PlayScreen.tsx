@@ -50,7 +50,6 @@ import { RearrangeSeats } from './RearrangeSeats';
 import { ringSlots, MAX_RING_PLAYERS } from './ringLayout';
 import { reconcileRingOrder } from './ringOrder';
 import { leaderIdOf } from './leader';
-import { seatColorVar, seatShape } from './seat';
 import './PlayScreen.css';
 
 export function PlayScreen() {
@@ -359,9 +358,6 @@ function RingView({
             }}
           >
             <span className="chip__name">
-              <span style={{ color: seatColorVar(row.seat) }} aria-hidden="true">
-                {seatShape(row.seat)}
-              </span>{' '}
               {row.name}
               {isLeader && (
                 <>
